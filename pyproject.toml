@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "portal-ml"
+version = "0.1.0"
+description = "Hybrid Neuroevolutionary Reasoning Agent in Portal (PoC): Decoupled Behavior Tree DSL + Motor Primitives + Source Engine Bridge"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[tool.setuptools.packages.find]
+include = ["portal_ml*"]
