@@ -45,13 +45,22 @@ Started 2026-11-26. Objective: prove a decoupled 3-layer neuroevolutionary reaso
 - Verified **7/7 chambers PASS live in Portal 1** for BOTH Phase 1 scripted (`11/27/19/11/39/39/47` steps, 1.50s; `records/live_7ch_phase1_2026-11-26.jsonl`) and Phase 2B neural `MoveTo(83w) + Aim(44w)` (`11/10/20/22/61/72/77` steps, 2.23s; `records/live_7ch_phase2b_2026-11-26.jsonl`) after fixing post-drop clear step (`72u` off the 80x80 button) and server-side yaw tracking (`tracked_yaw_` + `ServerCommand setang`).
 - Audited all 24 real Portal 1 campaign `.bsp` maps in `portal_pak_dir.vpk` (`scripts/audit_campaign_maps.py`) and documented the real-game feasibility and 4-upgrade full-game roadmap in [docs/REAL_GAME_ANALYSIS.md](REAL_GAME_ANALYSIS.md).
 
+### Milestone 4 — Native SendProp Physics, Live C++ Milestones & Generic BSP Discovery (Done, 2026-11-26)
+- Upgraded `motor_controller.cpp` + `blackboard_extractor.cpp` from per-tick `ent_fire !player AddOutput basevelocity` console commands to direct SendProp `m_vecBaseVelocity` + Portal 1 `FL_BASEVELOCITY` (`1<<23`, compiled with `-DPORTAL=1` + SDK `const.h`) actuation (calibrated `0.72x` to match 240 u/s mock speed).
+- Added live C++ milestone & reward computation (`ComputeStepReward` in `portal_ml_plugin.cpp`) matching `MockPortalEnv` 1:1 (`cube_grabbed` +10, `button_pressed` +25, `portal_*` +5, `portals_bridged` +15, `portal_traversed` +20, `exit_reached` +100).
+- Verified **7/7 live Portal 1 PASS** with native velocity + live milestones for BOTH Phase 1 scripted (`13/35/22/11/51/40/43` steps, 2.66s; `records/live_m4_native_phase1_2026-11-26.jsonl`) and Phase 2B neural `MoveTo(83w) + Aim(44w)` (`12/58/21/21/69/62/98` steps, 2.79s, ~122 steps/sec, ~8.1ms resets; `records/live_m4_native_phase2b_2026-11-26.jsonl`).
+- Built pure C++17 `BspScanner` (`source_plugin/src/bsp_scanner.cpp`) and matching Python `portal_ml/vmf/bsp_reader.py` parsing BSP v20 lumps (entities, planes, vertexes, texdata, texinfo, faces, edges, surfedges) automatically at `LevelInit` for arbitrary maps (`"op":"map_info"` IPC query).
+- Verified live on Valve's unmodified campaign map **`testchmb_a_02`** via `scripts/inspect_live_map.py` (`records/live_testchmb_a02_2026-11-26.json`): auto-discovered 9 gameplay entities and 293 portalable concrete surfaces (walls, floors, ceilings) and moved the player cleanly via native `MoveVector`.
+- Documented the proposed Layer-4 small-LLM strategic memory & subgoal planner in [docs/FOUR_LAYER_ARCHITECTURE.md](FOUR_LAYER_ARCHITECTURE.md).
+
 ---
 
 ## Upcoming Milestones (Worked One at a Time)
 
-### Milestone 4 — Native Source Control & Generic Live-BSP Discovery
-- Upgrade `motor_controller.cpp` from console commands (`ent_teleport` / `basevelocity`) to direct `CUserCmd` + `IPhysicsObject::SetPosition` control and live milestone reward reporting in C++.
-- Replace static `kLayouts` in `blackboard_extractor.cpp` with dynamic server-edict & BSP portalable-surface discovery (`LevelInit` parser) so the bridge runs on arbitrary maps without hardcoded coordinates.
-
 ### Milestone 5 — First Real Campaign Chamber Benchmark (`testchmb_a_02`)
-- Load an unmodified Valve Portal 1 campaign map (`map testchmb_a_02`) through the generic Blackboard extractor, add fizzler awareness, and benchmark live real-game execution (see [docs/REAL_GAME_ANALYSIS.md](REAL_GAME_ANALYSIS.md)).
+- Extend generic live-map extraction with dynamic walkable-zone/room segmentation, fizzler (`trigger_portal_cleanser`) state, and real portal-gun firing / native cube pickup on unmodified `testchmb_a_02`.
+- Add multi-entity targeting in `WorkingMemory` (nearest unpressed button / unplaced cube) and benchmark live real-campaign completion.
+
+### Milestone 6 — Layer-4 Small-LLM Strategic Memory & Subgoal Planner
+- Implement the event-driven `StrategicPlanner` protocol (`docs/FOUR_LAYER_ARCHITECTURE.md`) with grammar-constrained JSON output and rolling episodic memory.
+- Run controlled 3-layer vs 4-layer ablations on multi-room campaign maps (`testchmb_a_02`, `testchmb_a_05`).

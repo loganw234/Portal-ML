@@ -9,6 +9,7 @@ set(SOURCE_SDK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../third_party/source-sdk-2013/s
 
 set(PLUGIN_SOURCES
     src/ipc_server.cpp
+    src/bsp_scanner.cpp
     src/blackboard_extractor.cpp
     src/motor_controller.cpp
     src/portal_ml_plugin.cpp
@@ -33,6 +34,7 @@ if(PORTAL_ML_USE_SOURCE_SDK)
     endif()
     target_compile_definitions(portal_ml_plugin PRIVATE
         PORTAL_ML_USE_SOURCE_SDK=1
+        PORTAL=1
         VALVE_LITTLE_ENDIAN=1
         COMPILER_MSVC=1
         COMPILER_MSVC32=1

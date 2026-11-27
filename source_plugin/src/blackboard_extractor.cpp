@@ -1,11 +1,14 @@
 #include "blackboard_extractor.h"
+#include "bsp_scanner.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstring>
 #include <iomanip>
 #include <sstream>
 
 #ifdef PORTAL_ML_USE_SOURCE_SDK
+#include "const.h"
 #include "eiface.h"
 #include "edict.h"
 #include "engine/ICollideable.h"
@@ -197,6 +200,10 @@ void BlackboardExtractor::SetEngineInterfaces(
     server_game_dll_ = server_game_dll;
 }
 
+void BlackboardExtractor::SetGenericMap(const BspMapData* map_data) {
+    generic_map_ = (map_data && map_data->loaded) ? map_data : nullptr;
+}
+
 void BlackboardExtractor::ResolveNetProps() {
     if (netprops_resolved_) return;
     netprops_resolved_ = true;
@@ -216,6 +223,7 @@ void BlackboardExtractor::ResolveNetProps() {
                     netprop_player_vel_y_ = oy;
                     netprop_player_vel_z_ = oz;
                     netprop_player_basevel_ = FindPropInTable(sc->m_pTable, "m_vecBaseVelocity");
+                    netprop_player_flags_ = FindPropInTable(sc->m_pTable, "m_fFlags");
                     netprop_eye_pitch_ = FindPropInTable(sc->m_pTable, "m_angEyeAngles[0]");
                     netprop_eye_yaw_ = FindPropInTable(sc->m_pTable, "m_angEyeAngles[1]");
                     break;
@@ -247,11 +255,39 @@ void BlackboardExtractor::SetPlayerVelocityXY(float vx, float vy, bool zero_z) {
         bv[0] = 0.0f;
         bv[1] = 0.0f;
         bv[2] = 0.0f;
+        if (netprop_player_flags_ >= 0) {
+            auto* flags = reinterpret_cast<int*>(base + netprop_player_flags_);
+            *flags &= ~FL_BASEVELOCITY;
+        }
     }
 #else
     (void)vx;
     (void)vy;
     (void)zero_z;
+#endif
+}
+
+void BlackboardExtractor::ApplyBaseVelocityXY(float dvx, float dvy) {
+    ResolveNetProps();
+#ifdef PORTAL_ML_USE_SOURCE_SDK
+    auto* engine = static_cast<IVEngineServer*>(engine_);
+    if (!engine || netprop_player_basevel_ < 0 || netprop_player_flags_ < 0) return;
+    edict_t* player_ed = engine->PEntityOfEntIndex(1);
+    if (!player_ed || player_ed->IsFree()) return;
+    IServerUnknown* unk = player_ed->GetUnknown();
+    if (!unk) return;
+    auto* base = reinterpret_cast<uint8_t*>(unk->GetBaseEntity());
+    if (!base) return;
+    auto* bv = reinterpret_cast<float*>(base + netprop_player_basevel_);
+    // FL_BASEVELOCITY persists across sub-ticks in CGameMovement; 0.72x matches 240 u/s mock speed.
+    bv[0] = dvx * 0.72f;
+    bv[1] = dvy * 0.72f;
+    bv[2] = 0.0f;
+    auto* flags = reinterpret_cast<int*>(base + netprop_player_flags_);
+    *flags |= FL_BASEVELOCITY;  // (1<<23) in Portal 1: consumed natively by CGameMovement
+#else
+    (void)dvx;
+    (void)dvy;
 #endif
 }
 
@@ -285,6 +321,19 @@ void BlackboardExtractor::SetPlayerEyeAngles(float pitch, float yaw) {
 }
 
 void BlackboardExtractor::OnResetChamber(int chamber_id) {
+    if (generic_map_) {
+        prev_player_pos_ = generic_map_->player_spawn;
+        has_prev_pos_ = false;
+        tracked_yaw_ = generic_map_->player_spawn_yaw;
+        tracked_pitch_ = 0.0f;
+        has_tracked_yaw_ = false;  // Let real campaign maps use live player eye angles
+        prev_zone_id_ = 0;
+        tracked_held_id_.clear();
+        pedestal_timer_ = 0.0f;
+        tracked_blue_ = PortalRecord{"blue"};
+        tracked_orange_ = PortalRecord{"orange"};
+        return;
+    }
     const auto& layout = GetChamberLayout(chamber_id);
     prev_player_pos_ = layout.player_spawn;
     has_prev_pos_ = false;
@@ -299,22 +348,33 @@ void BlackboardExtractor::OnResetChamber(int chamber_id) {
 }
 
 void BlackboardExtractor::NotifyPortalPlaced(const std::string& color, const std::string& wall_id) {
+    auto apply_wall = [&](const PortalWallRecord& w) {
+        PortalRecord& target = (color == "blue") ? tracked_blue_ : tracked_orange_;
+        PortalRecord& other = (color == "blue") ? tracked_orange_ : tracked_blue_;
+        if (other.active && other.wall_id == wall_id) {
+            other.active = false;
+            other.wall_id.clear();
+            other.zone_id = -1;
+        }
+        target.active = true;
+        target.wall_id = w.id;
+        target.pos = w.pos;
+        target.normal = w.normal;
+        target.zone_id = w.zone_id;
+    };
+    if (generic_map_) {
+        for (const auto& w : generic_map_->portal_surfaces) {
+            if (w.id == wall_id) {
+                apply_wall(w);
+                return;
+            }
+        }
+    }
     // Updated immediately on ShootPortal and cross-checked against live prop_portal edicts
     for (int cid = 4; cid <= 7; ++cid) {
         for (const auto& w : GetChamberPortalWalls(cid)) {
             if (w.id == wall_id) {
-                PortalRecord& target = (color == "blue") ? tracked_blue_ : tracked_orange_;
-                PortalRecord& other = (color == "blue") ? tracked_orange_ : tracked_blue_;
-                if (other.active && other.wall_id == wall_id) {
-                    other.active = false;
-                    other.wall_id.clear();
-                    other.zone_id = -1;
-                }
-                target.active = true;
-                target.wall_id = w.id;
-                target.pos = w.pos;
-                target.normal = w.normal;
-                target.zone_id = w.zone_id;
+                apply_wall(w);
                 return;
             }
         }
@@ -331,6 +391,9 @@ void BlackboardExtractor::NotifyPedestalPressed(float duration) {
 
 BlackboardState BlackboardExtractor::Extract(int chamber_id, int tick, float dt) {
     ResolveNetProps();
+    if (generic_map_) {
+        return ExtractGeneric(tick, dt);
+    }
     const auto& layout = GetChamberLayout(chamber_id);
 
     BlackboardState state;
@@ -492,6 +555,151 @@ BlackboardState BlackboardExtractor::Extract(int chamber_id, int tick, float dt)
     } else if (tick >= layout.max_steps) {
         state.done = true;
         state.success = false;
+    }
+
+    return state;
+}
+
+BlackboardState BlackboardExtractor::ExtractGeneric(int tick, float dt) {
+    BlackboardState state;
+    state.tick = tick;
+    state.dt = dt;
+    state.chamber_id = 0;  // 0 denotes generic live-BSP campaign/custom map
+    state.player_pos = generic_map_->player_spawn;
+    state.player_yaw = generic_map_->player_spawn_yaw;
+    state.blue_portal = tracked_blue_;
+    state.orange_portal = tracked_orange_;
+
+    std::vector<Vec3> live_props;
+    std::vector<Vec3> live_doors;
+
+#ifdef PORTAL_ML_USE_SOURCE_SDK
+    auto* engine = static_cast<IVEngineServer*>(engine_);
+    auto* pim = static_cast<IPlayerInfoManager*>(player_info_mgr_);
+    if (engine && pim) {
+        edict_t* player_ed = engine->PEntityOfEntIndex(1);
+        if (player_ed && !player_ed->IsFree()) {
+            IPlayerInfo* pinfo = pim->GetPlayerInfo(player_ed);
+            if (pinfo && pinfo->IsConnected()) {
+                const Vector org = pinfo->GetAbsOrigin();
+                const QAngle ang = pinfo->GetAbsAngles();
+                state.player_pos = {org.x, org.y, org.z};
+                state.player_yaw = ang.y;
+                state.player_pitch = ang.x;
+            }
+        }
+        const int max_ents = engine->GetEntityCount();
+        for (int i = 2; i < max_ents; ++i) {
+            edict_t* ed = engine->PEntityOfEntIndex(i);
+            if (!ed || ed->IsFree()) continue;
+            const char* cls = ed->GetClassName();
+            if (!cls) continue;
+            IServerUnknown* unk = ed->GetUnknown();
+            if (!unk) continue;
+            ICollideable* col = unk->GetCollideable();
+            if (!col) continue;
+            const Vector pos = col->GetCollisionOrigin();
+
+            if (std::strcmp(cls, "prop_physics") == 0) {
+                live_props.push_back({pos.x, pos.y, pos.z});
+            } else if (std::strcmp(cls, "func_door") == 0) {
+                live_doors.push_back({pos.x, pos.y, pos.z});
+            } else if (std::strcmp(cls, "prop_portal") == 0 &&
+                       netprop_portal_activated_ >= 0 && netprop_portal_is2_ >= 0) {
+                const auto* base = reinterpret_cast<const uint8_t*>(unk->GetBaseEntity());
+                if (base) {
+                    const bool activated = *reinterpret_cast<const bool*>(base + netprop_portal_activated_);
+                    const bool is_orange = *reinterpret_cast<const bool*>(base + netprop_portal_is2_);
+                    if (activated) {
+                        PortalRecord& pr = is_orange ? state.orange_portal : state.blue_portal;
+                        pr.active = true;
+                        pr.pos = {pos.x, pos.y, pos.z};
+                        pr.zone_id = 0;
+                    }
+                }
+            }
+        }
+    }
+#endif
+
+    if (has_prev_pos_ && dt > 1e-5f) {
+        state.player_vel = {
+            (state.player_pos.x - prev_player_pos_.x) / dt,
+            (state.player_pos.y - prev_player_pos_.y) / dt,
+            (state.player_pos.z - prev_player_pos_.z) / dt,
+        };
+    }
+    prev_player_pos_ = state.player_pos;
+    has_prev_pos_ = true;
+    state.player_zone_id = 0;
+    state.held_entity_id = tracked_held_id_;
+
+    auto dist3 = [](const Vec3& a, const Vec3& b) -> float {
+        const float dx = a.x - b.x;
+        const float dy = a.y - b.y;
+        const float dz = a.z - b.z;
+        return std::sqrt(dx * dx + dy * dy + dz * dz);
+    };
+
+    // Match BSP-discovered gameplay entities to live server positions
+    std::vector<Vec3> cube_positions;
+    for (const auto& de : generic_map_->entities) {
+        Vec3 pos = de.spawn_pos;
+        bool active = false;
+        const bool is_held = (!tracked_held_id_.empty() && tracked_held_id_ == de.id);
+
+        if (de.kind == "cube") {
+            float best_d = 1024.0f;
+            for (const auto& lp : live_props) {
+                const float d = dist3(lp, de.spawn_pos);
+                if (d < best_d) {
+                    best_d = d;
+                    pos = lp;
+                }
+            }
+            cube_positions.push_back(pos);
+        } else if (de.kind == "exit_door") {
+            float best_d = 192.0f;
+            for (const auto& ld : live_doors) {
+                const float d = dist3(ld, de.spawn_pos);
+                if (d < best_d) {
+                    best_d = d;
+                    active = (d > 16.0f);
+                }
+            }
+        }
+
+        state.entities.push_back({de.id, de.kind, pos, {}, 0, active, is_held, 0.0f});
+    }
+
+    // Check floor button activation by live cube proximity
+    for (auto& e : state.entities) {
+        if (e.kind == "floor_button") {
+            for (const auto& cp : cube_positions) {
+                if (DistXY(cp, e.pos) <= kButtonTriggerRadius &&
+                    std::fabs(cp.z - e.pos.z) <= 56.0f) {
+                    e.active = true;
+                    break;
+                }
+            }
+        }
+    }
+
+    // Include up to 32 nearest BSP concrete portalable surfaces to keep snapshots compact
+    std::vector<std::pair<float, size_t>> ranked;
+    ranked.reserve(generic_map_->portal_surfaces.size());
+    for (size_t i = 0; i < generic_map_->portal_surfaces.size(); ++i) {
+        ranked.emplace_back(dist3(state.player_pos, generic_map_->portal_surfaces[i].pos), i);
+    }
+    const size_t kMaxWalls = 32;
+    if (ranked.size() > kMaxWalls) {
+        std::partial_sort(ranked.begin(), ranked.begin() + kMaxWalls, ranked.end());
+        ranked.resize(kMaxWalls);
+    } else {
+        std::sort(ranked.begin(), ranked.end());
+    }
+    for (const auto& item : ranked) {
+        state.portal_walls.push_back(generic_map_->portal_surfaces[item.second]);
     }
 
     return state;

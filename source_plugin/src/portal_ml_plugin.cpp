@@ -51,9 +51,41 @@ void PortalMLPlugin::Unload() {
     ipc_.Stop();
 }
 
+void PortalMLPlugin::OnLevelInit(const char* map_name) {
+    current_map_name_ = map_name ? map_name : "";
+    if (current_map_name_ == "portal_ml_5chambers") {
+        bsp_map_ = BspMapData{};
+        extractor_.SetGenericMap(nullptr);
+        return;
+    }
+#ifdef PORTAL_ML_USE_SOURCE_SDK
+    auto* engine = static_cast<IVEngineServer*>(engine_);
+    if (engine && !current_map_name_.empty()) {
+        char gdir[512] = {};
+        engine->GetGameDir(gdir, sizeof(gdir));
+        const std::string bsp_path = std::string(gdir) + "/maps/" + current_map_name_ + ".bsp";
+        if (BspScanner::LoadFromFile(bsp_path, current_map_name_, bsp_map_)) {
+            extractor_.SetGenericMap(&bsp_map_);
+            std::ostringstream log;
+            log << "[Portal-ML] Generic BSP scan loaded '" << current_map_name_
+                << "': entities=" << bsp_map_.entities.size()
+                << ", portal_surfaces=" << bsp_map_.portal_surfaces.size() << "\n";
+            engine->LogPrint(log.str().c_str());
+        } else {
+            extractor_.SetGenericMap(nullptr);
+        }
+    }
+#endif
+}
+
 void PortalMLPlugin::ServerActivate() {
     SendServerCmd("sv_cheats 1; sv_gravity 600\n", false);
-    ResetChamberInPlace(1);
+    if (!extractor_.IsGenericMode()) {
+        ResetChamberInPlace(1);
+    } else {
+        achieved_milestones_.clear();
+        extractor_.OnResetChamber(0);
+    }
 }
 
 void PortalMLPlugin::ResetChamberInPlace(int chamber_id) {
@@ -64,14 +96,19 @@ void PortalMLPlugin::ResetChamberInPlace(int chamber_id) {
     awaiting_post_reset_ = false;
     pending_drop_cube_.clear();
     active_cmd_ = MotorCommand{};
+    achieved_milestones_.clear();
     extractor_.OnResetChamber(chamber_id);
     extractor_.SetPlayerVelocityXY(0.0f, 0.0f, true);
+
+    if (extractor_.IsGenericMode()) {
+        return;
+    }
 
     const auto& layout = GetChamberLayout(chamber_id);
     std::ostringstream ss;
     // Sub-millisecond in-place reset (no changelevel):
-    // 1. Stop movement and fizzle portals
-    ss << "-forward; -use; ent_fire !player AddOutput \"basevelocity 0 0 0\"; "
+    // 1. Stop movement, restore health (in case a prior episode fell into a hazard pit), and fizzle portals
+    ss << "-forward; -use; ent_fire !player SetHealth 100; ent_fire !player AddOutput \"basevelocity 0 0 0\"; "
        << "ent_fire prop_portal Fizzle; "
        << "ent_fire portal_ml_blue SetActivatedState 0; "
        << "ent_fire portal_ml_orange SetActivatedState 0; ";
@@ -91,6 +128,42 @@ void PortalMLPlugin::ResetChamberInPlace(int chamber_id) {
     SendServerCmd(ss.str(), false);
 }
 
+double PortalMLPlugin::ComputeStepReward(
+    const BlackboardState& post_state, std::vector<std::string>& out_milestones) {
+    double reward = -0.05;
+    auto award = [&](const char* name, double pts) {
+        if (achieved_milestones_.insert(name).second) {
+            out_milestones.emplace_back(name);
+            reward += pts;
+        }
+    };
+    if (!post_state.held_entity_id.empty()) {
+        award("cube_grabbed", 10.0);
+    }
+    for (const auto& e : post_state.entities) {
+        if ((e.kind == "floor_button" || e.kind == "pedestal_button") && e.active) {
+            award("button_pressed", 25.0);
+        }
+    }
+    if (post_state.blue_portal.active) {
+        award("portal_blue_placed", 5.0);
+    }
+    if (post_state.orange_portal.active) {
+        award("portal_orange_placed", 5.0);
+    }
+    if (post_state.blue_portal.active && post_state.orange_portal.active &&
+        post_state.blue_portal.zone_id != post_state.orange_portal.zone_id) {
+        award("portals_bridged", 15.0);
+    }
+    if (post_state.player_zone_id != step_start_zone_) {
+        award("portal_traversed", 20.0);
+    }
+    if (post_state.success) {
+        award("exit_reached", 100.0);
+    }
+    return reward;
+}
+
 void PortalMLPlugin::GameFrame(bool simulating) {
     if (!simulating) return;
 
@@ -102,7 +175,7 @@ void PortalMLPlugin::GameFrame(bool simulating) {
     // Allow Source physics to execute queued commands across sub-ticks
     if (pending_subticks_ > 0) {
         --pending_subticks_;
-        if (awaiting_post_reset_ && pending_subticks_ == 1) {
+        if (awaiting_post_reset_ && pending_subticks_ == 1 && !extractor_.IsGenericMode()) {
             // Re-pin player at spawn after velocity damping so zero residual momentum carries over
             const auto& layout = GetChamberLayout(current_chamber_);
             extractor_.SetPlayerVelocityXY(0.0f, 0.0f, true);
@@ -150,22 +223,32 @@ void PortalMLPlugin::GameFrame(bool simulating) {
             awaiting_post_step_ = false;
             const auto post_state = extractor_.Extract(current_chamber_, tick_, step_dt);
             // Ensure the physical Source func_door slides open when the cube rests on the floor button
-            const auto& layout = GetChamberLayout(current_chamber_);
-            if (layout.has_floor_button) {
-                for (const auto& e : post_state.entities) {
-                    if (e.kind == "floor_button" && e.active) {
-                        SendServerCmd("ent_fire " + layout.exit_id + " Open\n", false);
-                        break;
+            if (!extractor_.IsGenericMode()) {
+                const auto& layout = GetChamberLayout(current_chamber_);
+                if (layout.has_floor_button) {
+                    for (const auto& e : post_state.entities) {
+                        if (e.kind == "floor_button" && e.active) {
+                            SendServerCmd("ent_fire " + layout.exit_id + " Open\n", false);
+                            break;
+                        }
                     }
                 }
             }
-            ipc_.SendFrame(
-                "{\"ok\":true,\"op\":\"step\",\"snapshot\":" +
-                BlackboardExtractor::ToJson(post_state) +
-                ",\"reward\":" + (post_state.success ? "99.95" : "-0.05") +
-                ",\"done\":" + (post_state.done ? "true" : "false") +
-                ",\"success\":" + (post_state.success ? "true" : "false") +
-                ",\"milestones\":[]}");
+            std::vector<std::string> step_milestones;
+            const double reward = ComputeStepReward(post_state, step_milestones);
+            std::ostringstream resp;
+            resp << "{\"ok\":true,\"op\":\"step\",\"snapshot\":"
+                 << BlackboardExtractor::ToJson(post_state)
+                 << ",\"reward\":" << reward
+                 << ",\"done\":" << (post_state.done ? "true" : "false")
+                 << ",\"success\":" << (post_state.success ? "true" : "false")
+                 << ",\"milestones\":[";
+            for (size_t i = 0; i < step_milestones.size(); ++i) {
+                if (i > 0) resp << ',';
+                resp << '"' << step_milestones[i] << '"';
+            }
+            resp << "]}";
+            ipc_.SendFrame(resp.str());
             return;
         }
     }
@@ -177,6 +260,16 @@ void PortalMLPlugin::GameFrame(bool simulating) {
 
     if (req.find("\"op\":\"ping\"") != std::string::npos) {
         ipc_.SendFrame("{\"ok\":true,\"op\":\"pong\"}");
+        return;
+    }
+
+    if (req.find("\"op\":\"map_info\"") != std::string::npos) {
+        std::ostringstream info;
+        info << "{\"ok\":true,\"op\":\"map_info\",\"map_name\":\"" << current_map_name_
+             << "\",\"generic_mode\":" << (extractor_.IsGenericMode() ? "true" : "false")
+             << ",\"discovered_entities\":" << bsp_map_.entities.size()
+             << ",\"portal_surfaces\":" << bsp_map_.portal_surfaces.size() << '}';
+        ipc_.SendFrame(info.str());
         return;
     }
 
@@ -239,7 +332,7 @@ public:
     const char* GetPluginDescription() override {
         return "Portal-ML Decoupled Neuroevolutionary Agent Bridge v0.1";
     }
-    void LevelInit(char const* /*pMapName*/) override {}
+    void LevelInit(char const* pMapName) override { impl_.OnLevelInit(pMapName); }
     void ServerActivate(edict_t* /*pEdictList*/, int /*edictCount*/, int /*clientMax*/) override {
         impl_.ServerActivate();
     }

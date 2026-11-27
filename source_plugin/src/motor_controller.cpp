@@ -152,17 +152,17 @@ void MotorController::Execute(
         const float dvx = ClampF(target_vx - state.player_vel.x, -260.0f, 260.0f);
         const float dvy = ClampF(target_vy - state.player_vel.y, -260.0f, 260.0f);
 
-        std::ostringstream ss;
-        ss << "ent_fire !player AddOutput \"basevelocity " << dvx << ' ' << dvy << " 0\"; ";
+        // Native SendProp m_vecBaseVelocity + FL_BASEVELOCITY actuation (zero ent_fire velocity spam)
+        extractor.ApplyBaseVelocityXY(dvx, dvy);
         if (!state.held_entity_id.empty()) {
             const float cx = state.player_pos.x;
             const float cy = state.player_pos.y;
             const float cz = state.player_pos.z + 108.0f;
+            std::ostringstream ss;
             ss << "ent_fire " << state.held_entity_id << " AddOutput \"origin "
-               << cx << ' ' << cy << ' ' << cz << "\"; ";
+               << cx << ' ' << cy << ' ' << cz << "\"\n";
+            IssueCmd(ss.str());
         }
-        ss << "\n";
-        IssueCmd(ss.str());
         return;
     }
 
@@ -187,24 +187,21 @@ void MotorController::Execute(
         const float speed = (!is_portal && dist < 72.0f) ? 140.0f : kMoveSpeed;
         const float target_vx = nx * speed;
         const float target_vy = ny * speed;
-        // Closed-loop delta-velocity impulse via basevelocity (prevents runaway stacking)
         const float dvx = ClampF(target_vx - state.player_vel.x, -260.0f, 260.0f);
         const float dvy = ClampF(target_vy - state.player_vel.y, -260.0f, 260.0f);
         const float yaw = std::atan2(dy, dx) * kRadToDeg;
         extractor.SetPlayerEyeAngles(0.0f, yaw);
 
-        std::ostringstream ss;
-        ss << "ent_fire !player AddOutput \"basevelocity " << dvx << ' ' << dvy << " 0\"; ";
-        // Carry held cube well above 72u player hull (non-solid while carried)
+        extractor.ApplyBaseVelocityXY(dvx, dvy);
         if (!state.held_entity_id.empty()) {
             const float cx = state.player_pos.x;
             const float cy = state.player_pos.y;
             const float cz = state.player_pos.z + 108.0f;
+            std::ostringstream ss;
             ss << "ent_fire " << state.held_entity_id << " AddOutput \"origin "
-               << cx << ' ' << cy << ' ' << cz << "\"; ";
+               << cx << ' ' << cy << ' ' << cz << "\"\n";
+            IssueCmd(ss.str());
         }
-        ss << "\n";
-        IssueCmd(ss.str());
         return;
     }
 

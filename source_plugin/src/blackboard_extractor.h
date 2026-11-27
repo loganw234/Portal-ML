@@ -5,6 +5,8 @@
 
 namespace portal_ml {
 
+struct BspMapData;
+
 struct Vec3 {
     float x = 0.0f;
     float y = 0.0f;
@@ -97,6 +99,8 @@ int ClassifyZone(const ChamberLayout& layout, float x, float y);
 class BlackboardExtractor {
 public:
     void SetEngineInterfaces(void* engine_server, void* player_info_mgr, void* server_game_dll);
+    void SetGenericMap(const BspMapData* map_data);
+    bool IsGenericMode() const { return generic_map_ != nullptr; }
     void OnResetChamber(int chamber_id);
     void NotifyPortalPlaced(const std::string& color, const std::string& wall_id);
     void NotifyHoldState(const std::string& held_entity_id);
@@ -104,13 +108,17 @@ public:
 
     BlackboardState Extract(int chamber_id, int tick, float dt);
     void SetPlayerVelocityXY(float vx, float vy, bool zero_z = false);
+    void ApplyBaseVelocityXY(float dvx, float dvy);
     void SetPlayerEyeAngles(float pitch, float yaw);
     static std::string ToJson(const BlackboardState& state);
 
 private:
+    BlackboardState ExtractGeneric(int tick, float dt);
+
     void* engine_ = nullptr;
     void* player_info_mgr_ = nullptr;
     void* server_game_dll_ = nullptr;
+    const BspMapData* generic_map_ = nullptr;
 
     Vec3 prev_player_pos_{};
     bool has_prev_pos_ = false;
@@ -128,6 +136,7 @@ private:
     int netprop_player_vel_y_ = -1;
     int netprop_player_vel_z_ = -1;
     int netprop_player_basevel_ = -1;
+    int netprop_player_flags_ = -1;
     int netprop_eye_pitch_ = -1;
     int netprop_eye_yaw_ = -1;
     bool netprops_resolved_ = false;

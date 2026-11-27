@@ -72,6 +72,9 @@ class SourcePortalEnv:
         resp = self._request({"op": "ping"})
         return resp.get("op") == "pong"
 
+    def map_info(self) -> dict[str, Any]:
+        return self._request({"op": "map_info"})
+
     def reset(self, chamber_id: int) -> BlackboardSnapshot:
         resp = self._request({"op": "reset", "chamber_id": int(chamber_id)})
         return BlackboardSnapshot.from_dict(resp["snapshot"])

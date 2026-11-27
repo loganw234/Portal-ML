@@ -91,6 +91,8 @@ def main() -> int:
 
             ep_start = time.perf_counter()
             steps = 0
+            ep_reward = 0.0
+            ep_milestones: list[str] = []
             last_cmd_str = "none"
             while not snap.done and steps < args.max_steps:
                 tick_res = ev.tick(snap)
@@ -99,6 +101,9 @@ def main() -> int:
                 last_cmd_str = f"{cmd.kind.value}({cmd.to_dict()})"
                 step_res = env.step(cmd)
                 snap = step_res.snapshot
+                ep_reward += step_res.reward
+                if step_res.milestones:
+                    ep_milestones.extend(step_res.milestones)
                 steps += 1
 
                 if trace_fp is not None:
@@ -140,8 +145,8 @@ def main() -> int:
                 passed_count += 1
             print(
                 f"  Chamber {cid}: {status:4s} | reset={reset_ms:6.2f}ms | steps={steps:3d} "
-                f"| elapsed={ep_sec:5.2f}s | final_pos={[round(v,1) for v in snap.player.pos.to_list()]} "
-                f"z={snap.player.zone_id} held={snap.player.held_entity_id} last={last_cmd_str}"
+                f"| elapsed={ep_sec:5.2f}s | reward={ep_reward:6.2f} | ms={ep_milestones} "
+                f"| final_pos={[round(v,1) for v in snap.player.pos.to_list()]} z={snap.player.zone_id}"
             )
     finally:
         if source_env is not None:
