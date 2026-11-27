@@ -36,7 +36,17 @@ from portal_ml.sim.chambers import CHAMBERS
 from portal_ml.vmf.generator import build_five_chamber_vmf
 
 PERSONAL_PATH_RE = re.compile(r"(?:[A-Za-z]:[\\/]+Users[\\/]+[A-Za-z0-9_.-]+|/home/[A-Za-z0-9_.-]+)")
-SKIP_DIRS = {".git", "__pycache__", "third_party", "build-x86", "build", ".pytest_cache"}
+SKIP_DIRS = {
+    ".git",
+    "__pycache__",
+    "third_party",
+    "build-x86",
+    "build",
+    ".pytest_cache",
+    ".venv",
+    ".venv-lora",
+    "lfm25_layer4_lora",
+}
 SCAN_EXTS = {".py", ".cpp", ".h", ".txt", ".md", ".bat", ".sh", ".ps1", ".toml", ".yml", ".yaml"}
 
 
