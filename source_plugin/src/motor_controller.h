@@ -9,6 +9,7 @@ namespace portal_ml {
 enum class MotorCmdKind {
     kNoOp,
     kMoveTo,
+    kMoveVec,
     kGrab,
     kDrop,
     kPress,
@@ -20,6 +21,9 @@ struct MotorCommand {
     std::string entity_id;
     std::string color;    // "blue" | "orange"
     std::string wall_id;
+    float forward = 0.0f;
+    float strafe = 0.0f;
+    float yaw_delta = 0.0f;
 };
 
 // Layer 3 (Phase 1): Deterministic scripted motor primitives executed inside Source.

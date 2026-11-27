@@ -137,7 +137,9 @@ void PortalMLPlugin::GameFrame(bool simulating) {
             extractor_.NotifyHoldState("");
             pending_drop_cube_.clear();
         }
-        if (awaiting_post_step_ && active_cmd_.kind == MotorCmdKind::kMoveTo && pending_subticks_ > 0) {
+        if (awaiting_post_step_ &&
+            (active_cmd_.kind == MotorCmdKind::kMoveTo || active_cmd_.kind == MotorCmdKind::kMoveVec) &&
+            pending_subticks_ > 0) {
             const auto mid_state = extractor_.Extract(current_chamber_, tick_, tick_dt_);
             if (mid_state.player_zone_id != step_start_zone_) {
                 // Player just traversed a portal — finish step immediately without oscillating

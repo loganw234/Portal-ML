@@ -17,6 +17,7 @@ from portal_ml.motor.primitives import (
     Grab,
     MotorCommand,
     MoveTo,
+    MoveVector,
     Press,
     ShootPortal,
 )
@@ -35,6 +36,7 @@ from portal_ml.sim.chambers import ChamberSpec, WalkableZone, get_chamber
 # Physics constants (Source Engine Hammer units)
 FIXED_DT = 0.1  # 10 Hz high-level stepping (matches host_framerate 0.05 x 2 sub-ticks)
 PLAYER_SPEED = 240.0  # units/sec (~24 u per step)
+MAX_YAW_RATE = 360.0  # deg/sec (up to 36 deg per step for continuous Phase-2 control)
 PORTAL_ENTER_RADIUS = 32.0
 PORTAL_EXIT_OFFSET = 44.0
 BUTTON_TRIGGER_RADIUS = 52.0
@@ -156,6 +158,10 @@ class MockPortalEnv:
         self._player.vel = Vec3(0.0, 0.0, 0.0)
         if isinstance(command, MoveTo):
             self._exec_move_to(command.entity_id, step_milestones)
+        elif isinstance(command, MoveVector):
+            self._exec_move_vec(
+                command.forward, command.strafe, command.yaw_delta, step_milestones
+            )
         elif isinstance(command, Grab):
             self._exec_grab(command.entity_id, step_milestones)
         elif isinstance(command, Drop):
@@ -279,6 +285,79 @@ class MockPortalEnv:
                     self._record_milestone("portal_traversed", milestones)
 
         # Record cube contact milestone when walking close to a loose cube
+        cube = self._first_entity(EntityKind.CUBE)
+        if (
+            cube is not None
+            and not cube.held
+            and cube.zone_id == self._player.zone_id
+            and self._player.pos.distance_xy(cube.pos) <= INTERACT_RADIUS
+        ):
+            self._record_milestone("cube_contact", milestones)
+
+    def _exec_move_vec(
+        self, forward: float, strafe: float, yaw_delta: float, milestones: list[str]
+    ) -> None:
+        """Execute continuous body-frame control (Phase 2 neuroevolved motor output)."""
+        fwd = max(-1.0, min(1.0, float(forward)))
+        stf = max(-1.0, min(1.0, float(strafe)))
+        yd = max(-1.0, min(1.0, float(yaw_delta)))
+
+        # Normalize (forward, strafe) to unit disk so diagonal motion cannot exceed PLAYER_SPEED
+        mag = math.hypot(fwd, stf)
+        if mag > 1.0:
+            fwd /= mag
+            stf /= mag
+
+        # Update heading in degrees, wrapped to (-180, 180]
+        new_yaw = (self._player.yaw + yd * MAX_YAW_RATE * self.dt + 180.0) % 360.0 - 180.0
+        self._player.yaw = new_yaw
+        rad = math.radians(new_yaw)
+        cos_y = math.cos(rad)
+        sin_y = math.sin(rad)
+
+        # Body-frame forward=(cos, sin), left=(-sin, cos)
+        wx = fwd * cos_y - stf * sin_y
+        wy = fwd * sin_y + stf * cos_y
+        step_dist = PLAYER_SPEED * self.dt
+        new_pos = Vec3(
+            self._player.pos.x + wx * step_dist,
+            self._player.pos.y + wy * step_dist,
+            self._player.pos.z,
+        )
+        clamped = self._zone(self._player.zone_id).clamp_xy(new_pos)
+        self._player.vel = Vec3(
+            (clamped.x - self._player.pos.x) / self.dt,
+            (clamped.y - self._player.pos.y) / self.dt,
+            0.0,
+        )
+        self._player.pos = clamped
+
+        # Continuous physics portal traversal: entering ANY active linked portal in current zone
+        if self._portal_cooldown == 0 and self._blue.active and self._orange.active:
+            for portal, dest in ((self._blue, self._orange), (self._orange, self._blue)):
+                if portal.zone_id != self._player.zone_id:
+                    continue
+                entry_point = portal.pos + portal.normal.scale(16.0)
+                if self._player.pos.distance_xy(entry_point) <= PORTAL_ENTER_RADIUS:
+                    dest_zone = self._zone(dest.zone_id)
+                    exit_pos = dest_zone.clamp_xy(
+                        Vec3(
+                            dest.pos.x + dest.normal.x * PORTAL_EXIT_OFFSET,
+                            dest.pos.y + dest.normal.y * PORTAL_EXIT_OFFSET,
+                            dest_zone.floor_z,
+                        )
+                    )
+                    old_zone = self._player.zone_id
+                    self._player.pos = exit_pos
+                    self._player.zone_id = dest.zone_id
+                    self._player.yaw = math.degrees(
+                        math.atan2(dest.normal.y, dest.normal.x)
+                    )
+                    self._portal_cooldown = 2
+                    if dest.zone_id != old_zone:
+                        self._record_milestone("portal_traversed", milestones)
+                    break
+
         cube = self._first_entity(EntityKind.CUBE)
         if (
             cube is not None

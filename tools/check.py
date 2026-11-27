@@ -25,6 +25,13 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from portal_ml.evolution.fitness import HELD_OUT_CHAMBER, TRAIN_CHAMBERS
+from portal_ml.motor.neural import (
+    AIM_INPUT_NAMES,
+    AIM_OUTPUT_NAMES,
+    MLP,
+    MOVETO_INPUT_NAMES,
+    MOVETO_OUTPUT_NAMES,
+)
 from portal_ml.sim.chambers import CHAMBERS
 from portal_ml.vmf.generator import build_five_chamber_vmf
 
@@ -135,6 +142,30 @@ def gate_vmf_integrity() -> tuple[bool, str]:
     return check_vmf_text(build_five_chamber_vmf().to_vmf())
 
 
+def check_phase2_checkpoints(moveto_path: Path, aim_path: Path) -> tuple[bool, str]:
+    try:
+        mt = MLP.load(
+            moveto_path,
+            expected_inputs=MOVETO_INPUT_NAMES,
+            expected_outputs=MOVETO_OUTPUT_NAMES,
+        )
+        aim = MLP.load(
+            aim_path,
+            expected_inputs=AIM_INPUT_NAMES,
+            expected_outputs=AIM_OUTPUT_NAMES,
+        )
+    except (OSError, ValueError, KeyError) as exc:
+        return False, str(exc)
+    return True, f"MoveTo({len(mt.weights)}w) + Aim({len(aim.weights)}w) schemas valid"
+
+
+def gate_phase2_checkpoints() -> tuple[bool, str]:
+    return check_phase2_checkpoints(
+        ROOT / "champions" / "moveto_mlp.json",
+        ROOT / "champions" / "aim_mlp.json",
+    )
+
+
 def run_controls() -> list[tuple[str, bool, str]]:
     """Negative controls: plant realistic faults and verify each gate catches them by code."""
     results: list[tuple[str, bool, str]] = []
@@ -159,6 +190,14 @@ def run_controls() -> list[tuple[str, bool, str]]:
     caught = (not ok_vmf) and (msg_vmf == "VMF-UNBALANCED-BRACES")
     results.append(("vmf-integrity/fault", caught, f"CONTROL-DETECTED ({msg_vmf})" if caught else "CONTROL-MISSED"))
 
+    # Control 5: swapped checkpoint schemas must refuse by CHECKPOINT-INPUTS
+    ok_ckpt, msg_ckpt = check_phase2_checkpoints(
+        ROOT / "champions" / "aim_mlp.json",
+        ROOT / "champions" / "moveto_mlp.json",
+    )
+    caught = (not ok_ckpt) and ("CHECKPOINT-INPUTS" in msg_ckpt)
+    results.append(("phase2-ckpt/fault", caught, "CONTROL-DETECTED (CHECKPOINT-INPUTS)" if caught else "CONTROL-MISSED"))
+
     return results
 
 
@@ -173,6 +212,7 @@ def main() -> int:
         ("coord-parity", gate_coord_parity()),
         ("held-out-iso", gate_held_out_isolation()),
         ("vmf-integrity", gate_vmf_integrity()),
+        ("phase2-ckpt", gate_phase2_checkpoints()),
         ("unit-tests", gate_unit_tests(quick=args.quick)),
     ]
 

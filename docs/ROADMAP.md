@@ -26,15 +26,17 @@ Started 2026-11-26. Objective: prove a decoupled 3-layer neuroevolutionary reaso
   - Held carried cubes overhead (`z+108`, `solid 0`) and dropped via server-side `EyeAngles` aim + `ent_teleport` + clear step + `DisableMotion` (honest limit: `CC_Ent_Teleport` places `prop_physics` center on the hit surface without lifting by half-height; direct `IPhysicsObject::SetPosition` is queued for Milestone 4).
 - **Verified 5/5 live Portal 1 pass** (`records/live_seed7_2026-11-26.jsonl`): Ch1 11 steps, Ch2 27 steps, Ch3 20 steps, Ch4 11 steps, **held-out Ch5 38 steps zero-shot** (~104ms in-place resets across 6 settle ticks).
 
+### Milestone 2 — Phase 2: Neuroevolved Neural Motor Primitives (Done, 2026-11-26)
+- Added continuous body-frame control (`MoveVector(forward, strafe, yaw_delta)`) to `portal_ml/motor/primitives.py`, `portal_ml/sim/mock_env.py`, and the 32-bit C++ Source Engine plugin (`source_plugin/src/motor_controller.cpp`, `portal_ml_plugin.cpp`).
+- Built pure-Python inspectable `MLP` with strict schema-checked checkpoints (`CHECKPOINT-INPUTS` / `CHECKPOINT-OUTPUTS` / `CHECKPOINT-WEIGHTS`), `NeuralMoveToPolicy` (`6->8->3`, 83 weights), `NeuralAimPolicy` (`4->6->2`, 44 weights), `HybridMotorController`, and `portal_ml/evolution/motor_trainer.py`.
+- Neuroevolved both networks from random weights on chamber-agnostic synthetic egocentric tasks (`scripts/train_phase2_motor.py --seed 7`: 100.0% validation on both).
+- Verified progressive primitive swaps underneath the **frozen** `champions/seed7_decoupled.bt` (zero changes to Layer 1 or Layer 2):
+  - **Phase 2A (neural `MoveTo`):** 5/5 mock (Ch1–5: 16, 18, 27, 10, 47) and **5/5 live Portal 1** (Ch1–5: 11, 12, 23, 10, 51; `records/live_phase2a_2026-11-26.jsonl`).
+  - **Phase 2B (neural `MoveTo` + neural `ShootPortal Aim`):** 5/5 mock (Ch1–5: 16, 18, 27, 20, 67) and **5/5 live Portal 1** (Ch1–5: 12, 12, 24, 24, 85; `records/live_phase2b_2026-11-26.jsonl`).
+
 ---
 
 ## Upcoming Milestones (Worked One at a Time)
-
-### Milestone 2 — Phase 2: Neuroevolved Neural Motor Primitives
-- Replace Phase-1 deterministic primitives one by one with small neuroevolved neural networks implementing `MotorPolicy` (`forward`, `strafe`, `yaw_delta`, `pitch_delta`, `use`, `fire_blue`, `fire_orange`):
-  1. Swap `MoveTo` first under a **frozen evolved BT** and verify Chambers 1–5 still pass.
-  2. Swap `ShootPortal` (aiming onto portalable surfaces).
-  3. Swap `Grab` / `Drop` / `Press`.
 
 ### Milestone 3 — Generalization Hardening & Expanded Held-Out Suite
 - Diagnose why some 4/4 decoupled champions fail Chamber 5 (portal overwrite order on return crossings) and improve zero-shot generalization consistency across seeds.

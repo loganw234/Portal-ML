@@ -18,6 +18,7 @@ from portal_ml.schema.blackboard import BlackboardSnapshot, PortalColor
 class MotorCommandKind(str, Enum):
     NOOP = "noop"
     MOVE_TO = "move_to"
+    MOVE_VEC = "move_vec"
     GRAB = "grab"
     DROP = "drop"
     PRESS = "press"
@@ -38,6 +39,12 @@ class MotorCommand:
         cmd = MotorCommandKind(data["cmd"])
         if cmd is MotorCommandKind.MOVE_TO:
             return MoveTo(entity_id=str(data["entity_id"]))
+        if cmd is MotorCommandKind.MOVE_VEC:
+            return MoveVector(
+                forward=float(data.get("forward", 0.0)),
+                strafe=float(data.get("strafe", 0.0)),
+                yaw_delta=float(data.get("yaw_delta", 0.0)),
+            )
         if cmd is MotorCommandKind.GRAB:
             return Grab(entity_id=str(data["entity_id"]))
         if cmd is MotorCommandKind.DROP:
@@ -64,6 +71,24 @@ class MoveTo(MotorCommand):
 
     def to_dict(self) -> dict[str, Any]:
         return {"cmd": self.kind.value, "entity_id": self.entity_id}
+
+
+@dataclass(frozen=True, slots=True)
+class MoveVector(MotorCommand):
+    """Continuous egocentric body-frame control emitted by Phase-2 neural policies."""
+
+    forward: float = 0.0  # [-1, 1] along player's facing yaw
+    strafe: float = 0.0  # [-1, 1] left of player's facing yaw
+    yaw_delta: float = 0.0  # [-1, 1] normalized yaw rate
+    kind: MotorCommandKind = MotorCommandKind.MOVE_VEC
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "cmd": self.kind.value,
+            "forward": round(self.forward, 4),
+            "strafe": round(self.strafe, 4),
+            "yaw_delta": round(self.yaw_delta, 4),
+        }
 
 
 @dataclass(frozen=True, slots=True)

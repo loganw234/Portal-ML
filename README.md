@@ -19,8 +19,13 @@ The core claim is architectural: separating *what* subgoal entity to pursue from
     - Chamber 3: PASS (20 steps, 2.10s, reset 105.3ms; cube dropped 7u from button center)
     - Chamber 4: PASS (11 steps, 1.08s, reset 103.5ms; live `prop_portal` traversal across pit)
     - Chamber 5 (held-out): **PASS zero-shot** (38 steps, 3.86s, reset 104.2ms; bidirectional portal crossing with cube, dropped 1.2u from button center)
+- **Phase 2 neuroevolved neural motor primitives verified on mock AND live Portal 1 (Milestone 2, 2026-11-26).**
+  - Evolved two small egocentric MLPs from random Gaussian weights (`python scripts/train_phase2_motor.py --seed 7`): `champions/moveto_mlp.json` (`6->8->3`, **83 weights**, 100% validation in 25.9s) and `champions/aim_mlp.json` (`4->6->2`, **44 weights**, 100% validation in 7.7s).
+  - Plugged underneath the **frozen** `champions/seed7_decoupled.bt` (zero retraining of Layer 2):
+    - **Phase 2A (neural `MoveTo`, 83w):** **5/5 mock** (16/18/27/10/47 steps) and **5/5 live Portal 1** (11/12/23/10/51 steps; `records/live_phase2a_2026-11-26.jsonl`).
+    - **Phase 2B (neural `MoveTo` + neural `ShootPortal Aim`, 127w total):** **5/5 mock** (16/18/27/20/67 steps) and **5/5 live Portal 1** (12/12/24/24/85 steps; `records/live_phase2b_2026-11-26.jsonl`).
 
-What comes next is tracked in [docs/ROADMAP.md](docs/ROADMAP.md): Phase-2 neuroevolved neural motor primitives, zero-shot generalization hardening, and native `CUserCmd` / `IPhysicsObject` control.
+What comes next is tracked in [docs/ROADMAP.md](docs/ROADMAP.md): zero-shot generalization hardening + expanded held-out suite (Milestone 3), and native `CUserCmd` / `IPhysicsObject` Source control (Milestone 4).
 
 ## The front door
 

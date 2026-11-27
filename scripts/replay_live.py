@@ -19,6 +19,8 @@ from portal_ml.bridge.source_env import SourcePortalEnv
 from portal_ml.bt.ast import BTNode, parse_bt
 from portal_ml.bt.evaluator import BehaviorTreeEvaluator
 from portal_ml.bt.reference_trees import get_reference_tree
+from portal_ml.motor.hybrid import HybridMotorController
+from portal_ml.motor.neural import NeuralAimPolicy, NeuralMoveToPolicy
 from portal_ml.sim.mock_env import MockPortalEnv, PortalEnv
 
 
@@ -39,10 +41,21 @@ def main() -> int:
     parser.add_argument("--max-steps", type=int, default=180)
     parser.add_argument("--verbose", action="store_true", help="Print every tick")
     parser.add_argument("--trace-out", default="", help="Optional JSONL file to record tick traces")
+    parser.add_argument("--neural-moveto", default="", help="Optional Phase-2 MoveTo MLP JSON checkpoint")
+    parser.add_argument("--neural-aim", default="", help="Optional Phase-2 ShootPortal Aim MLP JSON checkpoint")
     args = parser.parse_args()
 
     tree, label = load_tree(args.bt)
-    print(f"Replaying BT: {label} (nodes={tree.size()}) on backend={args.backend}")
+    moveto_pol = NeuralMoveToPolicy.load(args.neural_moveto) if args.neural_moveto else None
+    aim_pol = NeuralAimPolicy.load(args.neural_aim) if args.neural_aim else None
+    hybrid = HybridMotorController(moveto_policy=moveto_pol, aim_policy=aim_pol)
+    motor_desc = []
+    if moveto_pol is not None:
+        motor_desc.append(f"neural_moveto({len(moveto_pol.net.weights)}w)")
+    if aim_pol is not None:
+        motor_desc.append(f"neural_aim({len(aim_pol.net.weights)}w)")
+    motor_str = "+".join(motor_desc) if motor_desc else "scripted"
+    print(f"Replaying BT: {label} (nodes={tree.size()}) on backend={args.backend} motor={motor_str}")
 
     trace_fp = None
     if args.trace_out:
@@ -77,7 +90,8 @@ def main() -> int:
             last_cmd_str = "none"
             while not snap.done and steps < args.max_steps:
                 tick_res = ev.tick(snap)
-                cmd = tick_res.command
+                sym_cmd = tick_res.command
+                cmd = hybrid.lower(snap, sym_cmd)
                 last_cmd_str = f"{cmd.kind.value}({cmd.to_dict()})"
                 step_res = env.step(cmd)
                 snap = step_res.snapshot

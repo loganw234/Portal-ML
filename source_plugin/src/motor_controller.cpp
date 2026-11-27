@@ -1,6 +1,7 @@
 #include "motor_controller.h"
 
 #include <cmath>
+#include <cstdlib>
 #include <sstream>
 
 #ifdef PORTAL_ML_USE_SOURCE_SDK
@@ -15,6 +16,20 @@ constexpr float kMoveSpeed = 240.0f;
 
 float ClampF(float v, float lo, float hi) {
     return (v < lo) ? lo : ((v > hi) ? hi : v);
+}
+
+float WrapDeg(float deg) {
+    float r = std::fmod(deg + 180.0f, 360.0f);
+    if (r < 0.0f) r += 360.0f;
+    return r - 180.0f;
+}
+
+float ExtractJsonFloatField(const std::string& json, const std::string& key, float fallback = 0.0f) {
+    const std::string needle = "\"" + key + "\":";
+    auto pos = json.find(needle);
+    if (pos == std::string::npos) return fallback;
+    pos += needle.size();
+    return static_cast<float>(std::atof(json.c_str() + pos));
 }
 
 std::string ExtractJsonStringField(const std::string& json, const std::string& key) {
@@ -85,6 +100,11 @@ MotorCommand MotorController::ParseCommandJson(const std::string& json) {
     if (kind == "move_to") {
         cmd.kind = MotorCmdKind::kMoveTo;
         cmd.entity_id = ExtractJsonStringField(json, "entity_id");
+    } else if (kind == "move_vec") {
+        cmd.kind = MotorCmdKind::kMoveVec;
+        cmd.forward = ExtractJsonFloatField(json, "forward", 0.0f);
+        cmd.strafe = ExtractJsonFloatField(json, "strafe", 0.0f);
+        cmd.yaw_delta = ExtractJsonFloatField(json, "yaw_delta", 0.0f);
     } else if (kind == "grab") {
         cmd.kind = MotorCmdKind::kGrab;
         cmd.entity_id = ExtractJsonStringField(json, "entity_id");
@@ -108,6 +128,41 @@ void MotorController::Execute(
     if (cmd.kind == MotorCmdKind::kNoOp) {
         extractor.SetPlayerVelocityXY(0.0f, 0.0f);
         StopMovement();
+        return;
+    }
+
+    if (cmd.kind == MotorCmdKind::kMoveVec) {
+        // Phase 2 continuous body-frame control from neuroevolved MLP
+        float fwd = ClampF(cmd.forward, -1.0f, 1.0f);
+        float stf = ClampF(cmd.strafe, -1.0f, 1.0f);
+        const float yd = ClampF(cmd.yaw_delta, -1.0f, 1.0f);
+        const float mag = std::hypot(fwd, stf);
+        if (mag > 1.0f) {
+            fwd /= mag;
+            stf /= mag;
+        }
+        const float new_yaw = WrapDeg(state.player_yaw + yd * 36.0f);
+        extractor.SetPlayerEyeAngles(0.0f, new_yaw);
+
+        const float rad = new_yaw / kRadToDeg;
+        const float cos_y = std::cos(rad);
+        const float sin_y = std::sin(rad);
+        const float target_vx = (fwd * cos_y - stf * sin_y) * kMoveSpeed;
+        const float target_vy = (fwd * sin_y + stf * cos_y) * kMoveSpeed;
+        const float dvx = ClampF(target_vx - state.player_vel.x, -260.0f, 260.0f);
+        const float dvy = ClampF(target_vy - state.player_vel.y, -260.0f, 260.0f);
+
+        std::ostringstream ss;
+        ss << "ent_fire !player AddOutput \"basevelocity " << dvx << ' ' << dvy << " 0\"; ";
+        if (!state.held_entity_id.empty()) {
+            const float cx = state.player_pos.x;
+            const float cy = state.player_pos.y;
+            const float cz = state.player_pos.z + 108.0f;
+            ss << "ent_fire " << state.held_entity_id << " AddOutput \"origin "
+               << cx << ' ' << cy << ' ' << cz << "\"; ";
+        }
+        ss << "\n";
+        IssueCmd(ss.str());
         return;
     }
 
