@@ -61,8 +61,15 @@ class BehaviorTreeEvaluator:
           ending the tick immediately.
     """
 
-    def __init__(self, tree: BTNode) -> None:
+    def __init__(
+        self,
+        tree: BTNode,
+        solid_arrival_radius: float = 18.0,
+        floor_arrival_radius: float = 18.0,
+    ) -> None:
         self.tree = tree
+        self.solid_arrival_radius = solid_arrival_radius
+        self.floor_arrival_radius = floor_arrival_radius
         self.memory = WorkingMemory()
 
     def reset(self) -> None:
@@ -150,12 +157,15 @@ class BehaviorTreeEvaluator:
             ent = resolve_entity(snap, mem, ref)
             if ent is None or ent.zone_id != snap.player.zone_id:
                 return NodeStatus.FAILURE
-            # Textbook BT arrival semantics: non-exit targets succeed once reached
-            if (
-                ent.kind is not EntityKind.EXIT_DOOR
-                and snap.player.pos.distance_xy(ent.pos) <= 18.0
-            ):
-                return NodeStatus.SUCCESS
+            # Textbook BT arrival semantics: non-exit targets succeed once reached.
+            # Default 18u preserves the frozen mock yardstick; Source Engine passes 42u/28u
+            # to account for its 32u player + 32u solid prop collision hulls.
+            if ent.kind in (EntityKind.CUBE, EntityKind.PEDESTAL_BUTTON):
+                if snap.player.pos.distance_xy(ent.pos) <= self.solid_arrival_radius:
+                    return NodeStatus.SUCCESS
+            elif ent.kind is EntityKind.FLOOR_BUTTON:
+                if snap.player.pos.distance_xy(ent.pos) <= self.floor_arrival_radius:
+                    return NodeStatus.SUCCESS
             ctx.command = MoveTo(entity_id=ent.id)
             return NodeStatus.RUNNING
 

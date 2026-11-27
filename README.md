@@ -10,11 +10,17 @@ The core claim is architectural: separating *what* subgoal entity to pursue from
 - **Decoupled vs unconstrained ablation measured (5 seeds, pop 120, max 120 gens, trained strictly on Chambers 1–4):**
   - `decoupled` (`SEQUENCE(goal_selector, execution)`): **4/5 seeds** solved all 4 training chambers; **2/5 seeds** passed held-out Chamber 5 zero-shot in **44–45 steps** (mean size 21.8 AST nodes).
   - `unconstrained` (flat single BT): **0/5 seeds** solved Chambers 1–4 (all stalled at 2/4); **0/5** passed Chamber 5.
-- **Live Portal 1 (`appID=400`) map and C++ server plugin built and verified.**
-  - Single-map 5-chamber `.vmf` compiled cleanly through Portal 1 `vbsp`, `vvis`, and `vrad` with zero leaks (512 triangles, 5 airtight chambers separated by 2048u void gaps for sub-millisecond in-place resets).
-  - 32-bit x86 MSVC C++17 server plugin (`ISERVERPLUGINCALLBACKS003`, zero `tier0.lib`/`tier1.lib` link dependencies) compiled cleanly and verified against live Portal 1 over `127.0.0.1:27500`.
+- **Live Portal 1 (`appID=400`) map, C++ server plugin, and sim-to-Source transfer verified (Milestone 1, 2026-11-26).**
+  - Single-map 5-chamber `.vmf` compiled cleanly through Portal 1 `vbsp`, `vvis`, and `vrad` with zero leaks (512 triangles, 5 airtight chambers separated by 2048u void gaps, flush 1u concrete portal panels, and `point_teleport` reset targets).
+  - 32-bit x86 MSVC C++17 server plugin (`ISERVERPLUGINCALLBACKS003`, zero `tier0.lib`/`tier1.lib` link dependencies) compiled cleanly and verified live over `127.0.0.1:27500`.
+  - **Mock-evolved champion (`champions/seed7_decoupled.bt`, 24 nodes, trained strictly on Chambers 1–4 in Python) transferred zero-shot to live Portal 1 and cleared 5/5 chambers** in ~11.0s total (`records/live_seed7_2026-11-26.jsonl`):
+    - Chamber 1: PASS (11 steps, 1.16s, reset 104.5ms)
+    - Chamber 2: PASS (27 steps, 2.84s, reset 96.5ms)
+    - Chamber 3: PASS (20 steps, 2.10s, reset 105.3ms; cube dropped 7u from button center)
+    - Chamber 4: PASS (11 steps, 1.08s, reset 103.5ms; live `prop_portal` traversal across pit)
+    - Chamber 5 (held-out): **PASS zero-shot** (38 steps, 3.86s, reset 104.2ms; bidirectional portal crossing with cube, dropped 1.2u from button center)
 
-What comes next is tracked in [docs/ROADMAP.md](docs/ROADMAP.md): sim-to-Source live replay & physics calibration, Phase-2 neuroevolved neural motor primitives, zero-shot generalization hardening, and native `CUserCmd` control.
+What comes next is tracked in [docs/ROADMAP.md](docs/ROADMAP.md): Phase-2 neuroevolved neural motor primitives, zero-shot generalization hardening, and native `CUserCmd` / `IPhysicsObject` control.
 
 ## The front door
 

@@ -103,6 +103,8 @@ public:
     void NotifyPedestalPressed(float duration);
 
     BlackboardState Extract(int chamber_id, int tick, float dt);
+    void SetPlayerVelocityXY(float vx, float vy, bool zero_z = false);
+    void SetPlayerEyeAngles(float pitch, float yaw);
     static std::string ToJson(const BlackboardState& state);
 
 private:
@@ -118,6 +120,12 @@ private:
     PortalRecord tracked_orange_{"orange"};
     int netprop_portal_activated_ = -1;
     int netprop_portal_is2_ = -1;
+    int netprop_player_vel_x_ = -1;
+    int netprop_player_vel_y_ = -1;
+    int netprop_player_vel_z_ = -1;
+    int netprop_player_basevel_ = -1;
+    int netprop_eye_pitch_ = -1;
+    int netprop_eye_yaw_ = -1;
     bool netprops_resolved_ = false;
 
     void ResolveNetProps();

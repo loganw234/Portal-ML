@@ -1,7 +1,8 @@
 # Launch Portal 1 with portal_ml_plugin loaded and portal_ml_5chambers.bsp ready for IPC.
 param(
     [string]$PortalDir = "C:\Program Files (x86)\Steam\steamapps\common\Portal",
-    [switch]$TextMode
+    [switch]$TextMode,
+    [switch]$ShowConsole
 )
 
 $hl2 = Join-Path $PortalDir "hl2.exe"
@@ -14,11 +15,14 @@ $argsList = @(
     "-game", "portal",
     "-insecure",
     "-novid",
-    "-console",
+    "-nojoy",
     "+sv_cheats", "1",
-    "+host_framerate", "0.05",
     "+map", "portal_ml_5chambers"
 )
+
+if ($ShowConsole) {
+    $argsList += "-console"
+}
 
 if ($TextMode) {
     $argsList += "-textmode"

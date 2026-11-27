@@ -175,7 +175,77 @@ void BlackboardExtractor::ResolveNetProps() {
     if (dll) {
         netprop_portal_activated_ = FindSendPropOffset(dll, "CProp_Portal", "m_bActivated");
         netprop_portal_is2_ = FindSendPropOffset(dll, "CProp_Portal", "m_bIsPortal2");
+        for (ServerClass* sc = dll->GetAllServerClasses(); sc != nullptr; sc = sc->m_pNext) {
+            if (!sc->m_pNetworkName) continue;
+            if (std::strstr(sc->m_pNetworkName, "Player") != nullptr) {
+                const int ox = FindPropInTable(sc->m_pTable, "m_vecVelocity[0]");
+                const int oy = FindPropInTable(sc->m_pTable, "m_vecVelocity[1]");
+                const int oz = FindPropInTable(sc->m_pTable, "m_vecVelocity[2]");
+                if (ox >= 0 && oy >= 0) {
+                    netprop_player_vel_x_ = ox;
+                    netprop_player_vel_y_ = oy;
+                    netprop_player_vel_z_ = oz;
+                    netprop_player_basevel_ = FindPropInTable(sc->m_pTable, "m_vecBaseVelocity");
+                    netprop_eye_pitch_ = FindPropInTable(sc->m_pTable, "m_angEyeAngles[0]");
+                    netprop_eye_yaw_ = FindPropInTable(sc->m_pTable, "m_angEyeAngles[1]");
+                    break;
+                }
+            }
+        }
     }
+#endif
+}
+
+void BlackboardExtractor::SetPlayerVelocityXY(float vx, float vy, bool zero_z) {
+    ResolveNetProps();
+#ifdef PORTAL_ML_USE_SOURCE_SDK
+    auto* engine = static_cast<IVEngineServer*>(engine_);
+    if (!engine || netprop_player_vel_x_ < 0 || netprop_player_vel_y_ < 0) return;
+    edict_t* player_ed = engine->PEntityOfEntIndex(1);
+    if (!player_ed || player_ed->IsFree()) return;
+    IServerUnknown* unk = player_ed->GetUnknown();
+    if (!unk) return;
+    auto* base = reinterpret_cast<uint8_t*>(unk->GetBaseEntity());
+    if (!base) return;
+    *reinterpret_cast<float*>(base + netprop_player_vel_x_) = vx;
+    *reinterpret_cast<float*>(base + netprop_player_vel_y_) = vy;
+    if (zero_z && netprop_player_vel_z_ >= 0) {
+        *reinterpret_cast<float*>(base + netprop_player_vel_z_) = 0.0f;
+    }
+    if (vx == 0.0f && vy == 0.0f && netprop_player_basevel_ >= 0) {
+        auto* bv = reinterpret_cast<float*>(base + netprop_player_basevel_);
+        bv[0] = 0.0f;
+        bv[1] = 0.0f;
+        bv[2] = 0.0f;
+    }
+#else
+    (void)vx;
+    (void)vy;
+    (void)zero_z;
+#endif
+}
+
+void BlackboardExtractor::SetPlayerEyeAngles(float pitch, float yaw) {
+    ResolveNetProps();
+#ifdef PORTAL_ML_USE_SOURCE_SDK
+    auto* engine = static_cast<IVEngineServer*>(engine_);
+    if (!engine) return;
+    edict_t* player_ed = engine->PEntityOfEntIndex(1);
+    if (!player_ed || player_ed->IsFree()) return;
+    engine->ClientCommand(player_ed, "setang %.2f %.2f 0\n", pitch, yaw);
+    IServerUnknown* unk = player_ed->GetUnknown();
+    if (!unk) return;
+    auto* base = reinterpret_cast<uint8_t*>(unk->GetBaseEntity());
+    if (!base) return;
+    if (netprop_eye_pitch_ >= 0) {
+        *reinterpret_cast<float*>(base + netprop_eye_pitch_) = pitch;
+    }
+    if (netprop_eye_yaw_ >= 0) {
+        *reinterpret_cast<float*>(base + netprop_eye_yaw_) = yaw;
+    }
+#else
+    (void)pitch;
+    (void)yaw;
 #endif
 }
 
@@ -343,7 +413,10 @@ BlackboardState BlackboardExtractor::Extract(int chamber_id, int tick, float dt)
         });
     }
 
-    const bool exit_open = layout.exit_starts_open || live_door_open || floor_btn_pressed || (pedestal_timer_ > 0.0f);
+    // In floor-button chambers, require the cube to be holding the button (not just the player stepping on its edge)
+    const bool exit_open = layout.exit_starts_open ||
+                           (layout.has_floor_button ? floor_btn_pressed
+                                                    : (live_door_open || (pedestal_timer_ > 0.0f)));
     const int exit_zone = ClassifyZone(layout, layout.exit_pos.x, layout.exit_pos.y);
     state.entities.push_back({
         layout.exit_id, "exit_door", layout.exit_pos, {}, exit_zone, exit_open, false, 0.0f

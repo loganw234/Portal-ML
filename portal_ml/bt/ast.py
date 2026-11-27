@@ -220,6 +220,7 @@ class _Parser:
 
 
 def _tokenize(text: str) -> list[str]:
+    text = text.strip()
     tokens: list[str] = []
     idx = 0
     n = len(text)

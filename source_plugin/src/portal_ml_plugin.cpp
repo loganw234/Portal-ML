@@ -1,5 +1,6 @@
 #include "portal_ml_plugin.h"
 
+#include <cmath>
 #include <cstdlib>
 #include <cstring>
 #include <sstream>
@@ -51,7 +52,7 @@ void PortalMLPlugin::Unload() {
 }
 
 void PortalMLPlugin::ServerActivate() {
-    SendServerCmd("sv_cheats 1; host_framerate 0.05; sv_gravity 600\n", false);
+    SendServerCmd("sv_cheats 1; sv_gravity 600\n", false);
     ResetChamberInPlace(1);
 }
 
@@ -60,23 +61,30 @@ void PortalMLPlugin::ResetChamberInPlace(int chamber_id) {
     tick_ = 0;
     pending_subticks_ = 0;
     awaiting_post_step_ = false;
+    awaiting_post_reset_ = false;
+    pending_drop_cube_.clear();
+    active_cmd_ = MotorCommand{};
     extractor_.OnResetChamber(chamber_id);
+    extractor_.SetPlayerVelocityXY(0.0f, 0.0f, true);
 
     const auto& layout = GetChamberLayout(chamber_id);
     std::ostringstream ss;
     // Sub-millisecond in-place reset (no changelevel):
     // 1. Stop movement and fizzle portals
-    ss << "-forward; -use; ent_fire prop_portal Fizzle; "
+    ss << "-forward; -use; ent_fire !player AddOutput \"basevelocity 0 0 0\"; "
+       << "ent_fire prop_portal Fizzle; "
        << "ent_fire portal_ml_blue SetActivatedState 0; "
        << "ent_fire portal_ml_orange SetActivatedState 0; ";
     // 2. Teleport player to chamber spawn
     ss << "setpos " << layout.player_spawn.x << ' ' << layout.player_spawn.y << ' '
        << layout.player_spawn.z << "; setang 0 " << layout.player_yaw << " 0; ";
-    // 3. Reset chamber cube if present
+    // 3. Reset chamber cube back to spawn via dedicated Teleport-Home point_teleport
     if (layout.has_cube) {
-        ss << "ent_fire " << layout.cube_id << " AddOutput \"origin "
-           << layout.cube_spawn.x << ' ' << layout.cube_spawn.y << ' '
-           << layout.cube_spawn.z << "\"; ";
+        const std::string tp = layout.cube_id + "_reset_tp";
+        ss << "ent_fire " << tp << " Teleport; "
+           << "ent_fire " << layout.cube_id << " AddOutput \"solid 6\" 0.02; "
+           << "ent_fire " << layout.cube_id << " EnableMotion \"\" 0.03; "
+           << "ent_fire " << layout.cube_id << " Wake \"\" 0.04; ";
     }
     // 4. Reset exit door to initial state
     ss << "ent_fire " << layout.exit_id << (layout.exit_starts_open ? " Open" : " Close") << "\n";
@@ -89,15 +97,78 @@ void PortalMLPlugin::GameFrame(bool simulating) {
     ipc_.PollAccept();
     if (!ipc_.HasClient()) return;
 
-    // If a step command is executing across sub-ticks, wait until physics advances
+    const float step_dt = tick_dt_ * static_cast<float>(subticks_per_step_);
+
+    // Allow Source physics to execute queued commands across sub-ticks
     if (pending_subticks_ > 0) {
         --pending_subticks_;
+        if (awaiting_post_reset_ && pending_subticks_ == 1) {
+            // Re-pin player at spawn after velocity damping so zero residual momentum carries over
+            const auto& layout = GetChamberLayout(current_chamber_);
+            extractor_.SetPlayerVelocityXY(0.0f, 0.0f, true);
+            std::ostringstream ss;
+            ss << "ent_fire !player AddOutput \"basevelocity 0 0 0\"; "
+               << "setpos " << layout.player_spawn.x << ' ' << layout.player_spawn.y << ' '
+               << layout.player_spawn.z << "; setang 0 " << layout.player_yaw << " 0\n";
+            SendServerCmd(ss.str(), false);
+        }
+        if (awaiting_post_step_ && active_cmd_.kind == MotorCmdKind::kDrop &&
+            !pending_drop_cube_.empty() && pending_subticks_ == subticks_per_step_ - 2) {
+            // Teleport cube onto the floor/button, step player clear, and lift the cube's center
+            // +20.5u above the 12u pad so it rests cleanly on top without CC_Ent_Teleport floor pop.
+            const auto drop_state = extractor_.Extract(current_chamber_, tick_, tick_dt_);
+            const auto& layout = GetChamberLayout(current_chamber_);
+            float bx = layout.exit_pos.x - drop_state.player_pos.x;
+            float by = layout.exit_pos.y - drop_state.player_pos.y;
+            float bdist = std::hypot(bx, by);
+            if (bdist < 1e-3f) {
+                bx = 1.0f;
+                by = 0.0f;
+                bdist = 1.0f;
+            }
+            const float clear_x = drop_state.player_pos.x + (bx / bdist) * 52.0f;
+            const float clear_y = drop_state.player_pos.y + (by / bdist) * 52.0f;
+            std::ostringstream ss;
+            ss << "ent_teleport " << pending_drop_cube_ << "; "
+               << "setpos " << clear_x << ' ' << clear_y << " 16; "
+               << "ent_fire " << pending_drop_cube_ << " DisableMotion \"\" 0.01\n";
+            SendServerCmd(ss.str(), false);
+            extractor_.SetPlayerVelocityXY(0.0f, 0.0f, true);
+            extractor_.NotifyHoldState("");
+            pending_drop_cube_.clear();
+        }
+        if (awaiting_post_step_ && active_cmd_.kind == MotorCmdKind::kMoveTo && pending_subticks_ > 0) {
+            const auto mid_state = extractor_.Extract(current_chamber_, tick_, tick_dt_);
+            if (mid_state.player_zone_id != step_start_zone_) {
+                // Player just traversed a portal — finish step immediately without oscillating
+                extractor_.SetPlayerVelocityXY(0.0f, 0.0f);
+                pending_subticks_ = 0;
+            }
+        }
         if (pending_subticks_ > 0) {
+            return;
+        }
+        if (awaiting_post_reset_) {
+            extractor_.SetPlayerVelocityXY(0.0f, 0.0f, true);
+            awaiting_post_reset_ = false;
+            const auto state = extractor_.Extract(current_chamber_, tick_, step_dt);
+            ipc_.SendFrame("{\"ok\":true,\"op\":\"reset\",\"snapshot\":" +
+                           BlackboardExtractor::ToJson(state) + "}");
             return;
         }
         if (awaiting_post_step_) {
             awaiting_post_step_ = false;
-            const auto post_state = extractor_.Extract(current_chamber_, tick_, fixed_dt_ * 2.0f);
+            const auto post_state = extractor_.Extract(current_chamber_, tick_, step_dt);
+            // Ensure the physical Source func_door slides open when the cube rests on the floor button
+            const auto& layout = GetChamberLayout(current_chamber_);
+            if (layout.has_floor_button) {
+                for (const auto& e : post_state.entities) {
+                    if (e.kind == "floor_button" && e.active) {
+                        SendServerCmd("ent_fire " + layout.exit_id + " Open\n", false);
+                        break;
+                    }
+                }
+            }
             ipc_.SendFrame(
                 "{\"ok\":true,\"op\":\"step\",\"snapshot\":" +
                 BlackboardExtractor::ToJson(post_state) +
@@ -122,19 +193,22 @@ void PortalMLPlugin::GameFrame(bool simulating) {
     if (req.find("\"op\":\"reset\"") != std::string::npos) {
         const int cid = ExtractIntField(req, "chamber_id", 1);
         ResetChamberInPlace(cid);
-        const auto state = extractor_.Extract(current_chamber_, tick_, fixed_dt_ * 2.0f);
-        ipc_.SendFrame("{\"ok\":true,\"op\":\"reset\",\"snapshot\":" +
-                       BlackboardExtractor::ToJson(state) + "}");
+        // Wait 6 ticks so setpos + velocity zero + cube/door reset settle cleanly
+        pending_subticks_ = 6;
+        awaiting_post_reset_ = true;
         return;
     }
 
     if (req.find("\"op\":\"step\"") != std::string::npos) {
         ++tick_;
-        const auto pre_state = extractor_.Extract(current_chamber_, tick_, fixed_dt_ * 2.0f);
-        const auto cmd = MotorController::ParseCommandJson(req);
-        motor_.Execute(cmd, pre_state, extractor_);
-        // Advance 2 fixed physics ticks (0.10s) before returning the post-step snapshot
-        pending_subticks_ = 2;
+        const auto pre_state = extractor_.Extract(current_chamber_, tick_, step_dt);
+        step_start_zone_ = pre_state.player_zone_id;
+        active_cmd_ = MotorController::ParseCommandJson(req);
+        if (active_cmd_.kind == MotorCmdKind::kDrop) {
+            pending_drop_cube_ = pre_state.held_entity_id;
+        }
+        motor_.Execute(active_cmd_, pre_state, extractor_);
+        pending_subticks_ = subticks_per_step_;
         awaiting_post_step_ = true;
         return;
     }

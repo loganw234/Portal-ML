@@ -14,11 +14,21 @@ Started 2026-11-26. Objective: prove a decoupled 3-layer neuroevolutionary reaso
 
 ---
 
-## Upcoming Milestones (Worked One at a Time)
+## Completed Milestones
 
-### Milestone 1 — Sim-to-Source Replay & Live Physics Calibration
-- Evolve and save a champion BT DSL on `MockPortalEnv`, then replay it end-to-end inside live Portal 1 across Chambers 1–5.
-- Record and close any sim-to-Source timing or physics discrepancies (`+use` pickup alignment, `func_weight_button` settling, portal entry/exit momentum, `func_door` open latency) so a mock-evolved champion clears Chambers 1–5 live in Portal 1.
+### Milestone 1 — Sim-to-Source Replay & Live Physics Calibration (Done, 2026-11-26)
+- Saved mock-evolved champion `champions/seed7_decoupled.bt` (24 AST nodes, trained strictly on Chambers 1–4) and built `scripts/replay_live.py` with JSONL tick trace recording.
+- Diagnosed and closed live Source Engine physics gaps across 6 iterative live Portal 1 runs:
+  - Disabled joystick drift (`-nojoy`) and client console input blocking (removed `-console` default from `launch_portal.ps1`).
+  - Calibrated solid-prop arrival in `portal_ml/bt/evaluator.py` (`42u` for solid cubes/pedestals matching 32u player+prop collision hulls; `28u` for walkable floor buttons).
+  - Switched `MoveTo` to closed-loop server-side `basevelocity` delta impulses (once per 6-subtick step) with portal-crossing stop guard and two-stage perpendicular portal approach.
+  - Thinned portal concrete panels to `1u` in `portal_ml/vmf/generator.py` (eliminating 8u corner snags) and added `point_teleport` reset targets (`spawnflags=1`) for clean in-place cube resets.
+  - Held carried cubes overhead (`z+108`, `solid 0`) and dropped via server-side `EyeAngles` aim + `ent_teleport` + clear step + `DisableMotion` (honest limit: `CC_Ent_Teleport` places `prop_physics` center on the hit surface without lifting by half-height; direct `IPhysicsObject::SetPosition` is queued for Milestone 4).
+- **Verified 5/5 live Portal 1 pass** (`records/live_seed7_2026-11-26.jsonl`): Ch1 11 steps, Ch2 27 steps, Ch3 20 steps, Ch4 11 steps, **held-out Ch5 38 steps zero-shot** (~104ms in-place resets across 6 settle ticks).
+
+---
+
+## Upcoming Milestones (Worked One at a Time)
 
 ### Milestone 2 — Phase 2: Neuroevolved Neural Motor Primitives
 - Replace Phase-1 deterministic primitives one by one with small neuroevolved neural networks implementing `MotorPolicy` (`forward`, `strafe`, `yaw_delta`, `pitch_delta`, `use`, `fire_blue`, `fire_orange`):

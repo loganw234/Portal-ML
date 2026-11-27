@@ -144,6 +144,28 @@ def _add_chamber_geometry(doc: VMFDocument, spec: ChamberSpec) -> None:
                     "spawnflags": "256",
                 },
             )
+            # Dynamic drop teleporter (moved to drop position before firing Teleport)
+            doc.add_entity(
+                classname="point_teleport",
+                properties={
+                    "targetname": f"{ent.id}_tp",
+                    "target": ent.id,
+                    "origin": f"{ex:g} {ey:g} {ez + 24.0:g}",
+                    "angles": "0 0 0",
+                    "spawnflags": "0",
+                },
+            )
+            # Dedicated Teleport-Home entity for ResetChamberInPlace()
+            doc.add_entity(
+                classname="point_teleport",
+                properties={
+                    "targetname": f"{ent.id}_reset_tp",
+                    "target": ent.id,
+                    "origin": f"{ex:g} {ey:g} {ez + 24.0:g}",
+                    "angles": "0 0 0",
+                    "spawnflags": "1",
+                },
+            )
         elif ent.kind is EntityKind.FLOOR_BUTTON:
             # Portal 1 weighted floor button: func_weight_button brush + base prop
             btn_brush = make_box_brush(
@@ -253,12 +275,12 @@ def _add_chamber_geometry(doc: VMFDocument, spec: ChamberSpec) -> None:
 
 
 def _add_portal_panel(doc: VMFDocument, wall: PortalWall) -> None:
-    """Emit a 128x128 portalable concrete panel brush + named info_target."""
+    """Emit a flush 128x128 portalable concrete panel brush + named info_target."""
     hw = wall.size[0] * 0.5
     hh = wall.size[1] * 0.5
     px, py, pz = wall.pos.x, wall.pos.y, wall.pos.z
     nx, ny = wall.normal.x, wall.normal.y
-    panel_depth = 8.0
+    panel_depth = 1.0
 
     if abs(ny) > 0.5:
         y_min = py if ny > 0 else py - panel_depth

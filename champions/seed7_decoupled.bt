@@ -1,0 +1,31 @@
+SEQUENCE(
+  SELECTOR(
+    SEQUENCE(
+      CONDITION(NOT cube_on_button),
+      CONDITION(NOT is_holding(cube)),
+      ACTION(SetTarget(cube))
+    ),
+    SEQUENCE(
+      CONDITION(is_open(exit)),
+      ACTION(SetTarget(exit))
+    ),
+    ACTION(SetTarget(pedestal_button)),
+    SEQUENCE(
+      CONDITION(exists(cube)),
+      ACTION(SetTarget(floor_button))
+    ),
+    ACTION(SetTarget(exit)),
+    ACTION(SetTarget(pedestal_button))
+  ),
+  SELECTOR(
+    SEQUENCE(
+      ACTION(MoveTo(target)),
+      ACTION(Drop())
+    ),
+    ACTION(Press(target)),
+    ACTION(Grab(target)),
+    ACTION(ShootPortal(orange, wall_here)),
+    ACTION(MoveTo(portal_here)),
+    ACTION(ShootPortal(blue, wall_near_target))
+  )
+)
