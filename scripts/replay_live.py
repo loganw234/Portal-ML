@@ -20,7 +20,11 @@ from portal_ml.bt.ast import BTNode, parse_bt
 from portal_ml.bt.evaluator import BehaviorTreeEvaluator
 from portal_ml.bt.reference_trees import get_reference_tree
 from portal_ml.motor.hybrid import HybridMotorController
-from portal_ml.motor.neural import NeuralAimPolicy, NeuralMoveToPolicy
+from portal_ml.motor.neural import (
+    NeuralAimPolicy,
+    NeuralMoveToPolicy,
+    NeuralParkourPolicy,
+)
 from portal_ml.planner import (
     FourLayerAgent,
     NullStrategicPlanner,
@@ -49,6 +53,7 @@ def main() -> int:
     parser.add_argument("--verbose", action="store_true", help="Print every tick")
     parser.add_argument("--trace-out", default="", help="Optional JSONL file to record tick traces")
     parser.add_argument("--neural-moveto", default="", help="Optional Phase-2 MoveTo MLP JSON checkpoint")
+    parser.add_argument("--neural-parkour", default="", help="Optional Milestone-7 sensor-equipped Parkour MLP JSON checkpoint")
     parser.add_argument("--neural-aim", default="", help="Optional Phase-2 ShootPortal Aim MLP JSON checkpoint")
     parser.add_argument(
         "--planner",
@@ -70,12 +75,17 @@ def main() -> int:
     args = parser.parse_args()
 
     tree, label = load_tree(args.bt)
-    moveto_pol = NeuralMoveToPolicy.load(args.neural_moveto) if args.neural_moveto else None
+    moveto_pol: NeuralMoveToPolicy | NeuralParkourPolicy | None = None
+    if args.neural_parkour:
+        moveto_pol = NeuralParkourPolicy.load(args.neural_parkour)
+    elif args.neural_moveto:
+        moveto_pol = NeuralMoveToPolicy.load(args.neural_moveto)
     aim_pol = NeuralAimPolicy.load(args.neural_aim) if args.neural_aim else None
     hybrid = HybridMotorController(moveto_policy=moveto_pol, aim_policy=aim_pol)
     motor_desc = []
     if moveto_pol is not None:
-        motor_desc.append(f"neural_moveto({len(moveto_pol.net.weights)}w)")
+        mtag = "neural_parkour" if isinstance(moveto_pol, NeuralParkourPolicy) else "neural_moveto"
+        motor_desc.append(f"{mtag}({len(moveto_pol.net.weights)}w)")
     if aim_pol is not None:
         motor_desc.append(f"neural_aim({len(aim_pol.net.weights)}w)")
     motor_str = "+".join(motor_desc) if motor_desc else "scripted"

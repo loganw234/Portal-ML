@@ -17,16 +17,23 @@ from portal_ml.motor.neural import (
     AIM_INPUT_NAMES,
     AIM_OUTPUT_NAMES,
     FIRE_GATE_THRESHOLD,
+    JUMP_GATE_THRESHOLD,
     MLP,
     MOVETO_INPUT_NAMES,
     MOVETO_OUTPUT_NAMES,
+    PARKOUR_INPUT_NAMES,
+    PARKOUR_OUTPUT_NAMES,
     NeuralAimPolicy,
     NeuralMoveToPolicy,
+    NeuralParkourPolicy,
     aim_egocentric_features,
     moveto_egocentric_features,
+    parkour_egocentric_features,
 )
-from portal_ml.schema.blackboard import Vec3
-from portal_ml.sim.mock_env import FIXED_DT, MAX_YAW_RATE, PLAYER_SPEED
+from portal_ml.motor.primitives import MoveTo, MoveVector
+from portal_ml.schema.blackboard import EntityKind, HazardVolume, Vec3
+from portal_ml.sim.chambers import ChamberSpec, EntitySpawn, ObstacleBox, PitBox, WalkableZone
+from portal_ml.sim.mock_env import FIXED_DT, MAX_YAW_RATE, PLAYER_SPEED, MockPortalEnv
 
 
 @dataclass(slots=True)
@@ -324,6 +331,377 @@ def evolve_aim_policy(config: MotorEvoConfig | None = None) -> MotorTrainResult:
     elapsed = time.perf_counter() - t0
     best_net.metadata = {
         "primitive": "ShootPortalAim",
+        "seed": cfg.seed,
+        "generations": cfg.generations,
+        "param_count": len(best_net.weights),
+        "val_fitness": round(best_val_fit, 3),
+        "val_success_rate": round(best_val_rate, 4),
+    }
+    return MotorTrainResult(
+        net=best_net,
+        best_fitness=best_val_fit,
+        success_rate=best_val_rate,
+        generations=cfg.generations,
+        elapsed_sec=elapsed,
+    )
+
+
+def _make_parkour_episodes(rng: random.Random, per_family: int = 3) -> list[ChamberSpec]:
+    """Generate randomized chamber-agnostic synthetic 3D movement/jumping/hazard tasks."""
+    specs: list[ChamberSpec] = []
+    cid = 900
+
+    for _ in range(per_family):
+        # Family 1: Open-field navigation (random spawn yaw & target bearing)
+        cid += 1
+        init_yaw = rng.uniform(-180.0, 180.0)
+        bearing = rng.uniform(-math.pi, math.pi)
+        dist = rng.uniform(140.0, 300.0)
+        sx, sy = 280.0, 280.0
+        tx = max(48.0, min(512.0, sx + dist * math.cos(bearing)))
+        ty = max(48.0, min(512.0, sy + dist * math.sin(bearing)))
+        specs.append(
+            ChamberSpec(
+                chamber_id=cid,
+                name="syn_open",
+                description="synthetic open nav",
+                held_out=False,
+                room_min=Vec3(0.0, 0.0, 0.0),
+                room_max=Vec3(560.0, 560.0, 256.0),
+                player_spawn=Vec3(sx, sy, 0.0),
+                player_spawn_yaw=init_yaw,
+                player_spawn_zone=0,
+                zones=(WalkableZone(0, 16.0, 544.0, 16.0, 544.0, 0.0),),
+                entities=(
+                    EntitySpawn(
+                        id="syn_exit",
+                        kind=EntityKind.EXIT_DOOR,
+                        pos=Vec3(tx, ty, 0.0),
+                        zone_id=0,
+                        initially_active=True,
+                    ),
+                ),
+                max_steps=45,
+                exit_starts_open=True,
+            )
+        )
+
+        # Family 2: Tall solid obstacle slalom
+        cid += 1
+        wall_x = rng.uniform(200.0, 270.0)
+        half_w = rng.uniform(44.0, 72.0)
+        cy = 160.0 + rng.uniform(-16.0, 16.0)
+        specs.append(
+            ChamberSpec(
+                chamber_id=cid,
+                name="syn_wall",
+                description="synthetic wall slalom",
+                held_out=False,
+                room_min=Vec3(0.0, 0.0, 0.0),
+                room_max=Vec3(512.0, 320.0, 256.0),
+                player_spawn=Vec3(64.0, 160.0, 0.0),
+                player_spawn_yaw=rng.uniform(-25.0, 25.0),
+                player_spawn_zone=0,
+                zones=(WalkableZone(0, 16.0, 496.0, 16.0, 304.0, 0.0),),
+                obstacles=(
+                    ObstacleBox(
+                        id="syn_obs",
+                        zone_id=0,
+                        min_x=wall_x,
+                        max_x=wall_x + 28.0,
+                        min_y=cy - half_w,
+                        max_y=cy + half_w,
+                        min_z=0.0,
+                        max_z=128.0,
+                    ),
+                ),
+                entities=(
+                    EntitySpawn(
+                        id="syn_exit",
+                        kind=EntityKind.EXIT_DOOR,
+                        pos=Vec3(448.0, 160.0, 0.0),
+                        zone_id=0,
+                        initially_active=True,
+                    ),
+                ),
+                max_steps=65,
+                exit_starts_open=True,
+            )
+        )
+
+        # Family 3: Full-width jumpable low hurdle
+        cid += 1
+        hx = rng.uniform(180.0, 260.0)
+        hz = rng.uniform(24.0, 32.0)
+        specs.append(
+            ChamberSpec(
+                chamber_id=cid,
+                name="syn_hurdle",
+                description="synthetic low hurdle",
+                held_out=False,
+                room_min=Vec3(0.0, 0.0, 0.0),
+                room_max=Vec3(512.0, 256.0, 256.0),
+                player_spawn=Vec3(64.0, 128.0, 0.0),
+                player_spawn_yaw=rng.uniform(-20.0, 20.0),
+                player_spawn_zone=0,
+                zones=(WalkableZone(0, 16.0, 496.0, 16.0, 240.0, 0.0),),
+                obstacles=(
+                    ObstacleBox(
+                        id="syn_hurdle",
+                        zone_id=0,
+                        min_x=hx,
+                        max_x=hx + 22.0,
+                        min_y=0.0,
+                        max_y=256.0,
+                        min_z=0.0,
+                        max_z=hz,
+                    ),
+                ),
+                entities=(
+                    EntitySpawn(
+                        id="syn_exit",
+                        kind=EntityKind.EXIT_DOOR,
+                        pos=Vec3(448.0, 128.0, 0.0),
+                        zone_id=0,
+                        initially_active=True,
+                    ),
+                ),
+                max_steps=50,
+                exit_starts_open=True,
+            )
+        )
+
+        # Family 4: Full-width toxic acid trench (must jump cleanly over)
+        cid += 1
+        ax = rng.uniform(200.0, 280.0)
+        aw = rng.uniform(60.0, 84.0)
+        specs.append(
+            ChamberSpec(
+                chamber_id=cid,
+                name="syn_acid",
+                description="synthetic acid trench",
+                held_out=False,
+                room_min=Vec3(0.0, 0.0, 0.0),
+                room_max=Vec3(560.0, 256.0, 256.0),
+                player_spawn=Vec3(64.0, 128.0, 0.0),
+                player_spawn_yaw=rng.uniform(-15.0, 15.0),
+                player_spawn_zone=0,
+                zones=(WalkableZone(0, 16.0, 544.0, 16.0, 240.0, 0.0),),
+                hazards=(
+                    HazardVolume(
+                        id="syn_acid_0",
+                        kind="acid",
+                        min_pos=Vec3(ax, 0.0, -32.0),
+                        max_pos=Vec3(ax + aw, 256.0, 8.0),
+                        damage_per_sec=250.0,
+                    ),
+                ),
+                entities=(
+                    EntitySpawn(
+                        id="syn_exit",
+                        kind=EntityKind.EXIT_DOOR,
+                        pos=Vec3(496.0, 128.0, 0.0),
+                        zone_id=0,
+                        initially_active=True,
+                    ),
+                ),
+                max_steps=50,
+                exit_starts_open=True,
+            )
+        )
+
+        # Family 5: Platform gap jump (pit between zone 0 and zone 1)
+        cid += 1
+        gap_start = rng.uniform(200.0, 248.0)
+        gap_w = rng.uniform(56.0, 80.0)
+        specs.append(
+            ChamberSpec(
+                chamber_id=cid,
+                name="syn_gap",
+                description="synthetic platform gap jump",
+                held_out=False,
+                room_min=Vec3(0.0, 0.0, 0.0),
+                room_max=Vec3(560.0, 256.0, 256.0),
+                player_spawn=Vec3(64.0, 128.0, 0.0),
+                player_spawn_yaw=rng.uniform(-15.0, 15.0),
+                player_spawn_zone=0,
+                zones=(
+                    WalkableZone(0, 16.0, gap_start, 16.0, 240.0, 0.0),
+                    WalkableZone(1, gap_start + gap_w, 544.0, 16.0, 240.0, 0.0),
+                ),
+                pits=(PitBox(gap_start, gap_start + gap_w, 0.0, 256.0, depth=128.0),),
+                entities=(
+                    EntitySpawn(
+                        id="syn_exit",
+                        kind=EntityKind.EXIT_DOOR,
+                        pos=Vec3(496.0, 128.0, 0.0),
+                        zone_id=1,
+                        initially_active=True,
+                    ),
+                ),
+                max_steps=50,
+                exit_starts_open=True,
+            )
+        )
+
+        # Family 6: Portal wall entry (target flush on wall; must NOT dodge wall when is_portal=1)
+        cid += 1
+        px = rng.uniform(120.0, 380.0)
+        specs.append(
+            ChamberSpec(
+                chamber_id=cid,
+                name="syn_portal_wall",
+                description="synthetic flush wall entry",
+                held_out=False,
+                room_min=Vec3(0.0, 0.0, 0.0),
+                room_max=Vec3(512.0, 320.0, 256.0),
+                player_spawn=Vec3(rng.uniform(96.0, 416.0), rng.uniform(140.0, 260.0), 0.0),
+                player_spawn_yaw=rng.uniform(-180.0, 180.0),
+                player_spawn_zone=0,
+                zones=(WalkableZone(0, 16.0, 496.0, 16.0, 304.0, 0.0),),
+                entities=(
+                    EntitySpawn(
+                        id="syn_exit",
+                        kind=EntityKind.EXIT_DOOR,
+                        pos=Vec3(px, 16.0, 0.0),
+                        zone_id=0,
+                        initially_active=True,
+                    ),
+                ),
+                max_steps=45,
+                exit_starts_open=True,
+            )
+        )
+
+    return specs
+
+
+def _eval_parkour_mlp(
+    net: MLP, specs: list[ChamberSpec], env: MockPortalEnv
+) -> tuple[float, float]:
+    policy = NeuralParkourPolicy(net)
+    cmd_move = MoveTo(entity_id="syn_exit")
+    total_fit = 0.0
+    successes = 0
+
+    for spec in specs:
+        snap = env.reset(spec=spec)
+        exit_pos = spec.entities[0].pos
+        is_portal_ep = spec.name == "syn_portal_wall"
+        d0 = max(1.0, snap.player.pos.distance_xy(exit_pos))
+        min_d = d0
+        jumps_used = 0
+        steps = 0
+
+        while not snap.done and steps < spec.max_steps:
+            if is_portal_ep:
+                feats = parkour_egocentric_features(snap, exit_pos, True)
+                fwd, strafe, yd, jg = net.forward(feats)
+                mv = MoveVector(
+                    forward=fwd,
+                    strafe=strafe,
+                    yaw_delta=yd,
+                    jump=(jg > JUMP_GATE_THRESHOLD),
+                )
+            else:
+                mv = policy.to_command(snap, cmd_move)
+            if getattr(mv, "jump", False) and snap.player.on_ground:
+                jumps_used += 1
+            res = env.step(mv)
+            snap = res.snapshot
+            steps += 1
+            d = snap.player.pos.distance_xy(exit_pos)
+            if d < min_d:
+                min_d = d
+
+        d_end = snap.player.pos.distance_xy(exit_pos)
+        progress = max(0.0, (d0 - d_end) / d0)
+        best_prog = max(0.0, (d0 - min_d) / d0)
+        health_frac = snap.player.health / 100.0
+        fit = 35.0 * progress + 15.0 * best_prog + 15.0 * health_frac
+        if snap.player.health <= 0.0:
+            fit -= 25.0
+        if snap.success:
+            successes += 1
+            fit += 75.0 + 1.0 * (spec.max_steps - steps) + 10.0 * health_frac
+        # Mild anti-spam penalty on open field / portal approach so agent only jumps when useful
+        if spec.name in ("syn_open", "syn_portal_wall") and jumps_used > 0:
+            fit -= 2.5 * jumps_used
+        total_fit += fit
+
+    n = max(1, len(specs))
+    return total_fit / n, successes / n
+
+
+def evolve_parkour_policy(
+    config: MotorEvoConfig | None = None, hidden_size: int = 12
+) -> MotorTrainResult:
+    """Neuroevolve a 208-weight MLP (12 -> 12 -> 4) for obstacle, hurdle, acid & gap traversal."""
+    cfg = config or MotorEvoConfig(
+        population_size=72,
+        generations=110,
+        elitism=6,
+        tournament_size=4,
+        mutation_sigma=0.25,
+        mutation_prob=0.30,
+        crossover_rate=0.45,
+        seed=7,
+    )
+    rng = random.Random(cfg.seed)
+    t0 = time.perf_counter()
+    env = MockPortalEnv(reuse_snapshot=True)
+
+    val_rng = random.Random(cfg.seed + 30_000)
+    val_specs = _make_parkour_episodes(val_rng, per_family=4)
+
+    pop = [
+        MLP.random(
+            len(PARKOUR_INPUT_NAMES),
+            hidden_size,
+            len(PARKOUR_OUTPUT_NAMES),
+            rng,
+            scale=0.5,
+            input_names=PARKOUR_INPUT_NAMES,
+            output_names=PARKOUR_OUTPUT_NAMES,
+        )
+        for _ in range(cfg.population_size)
+    ]
+
+    best_net = pop[0].clone()
+    best_val_fit = -1e9
+    best_val_rate = 0.0
+
+    for gen in range(cfg.generations):
+        train_specs = _make_parkour_episodes(rng, per_family=2)
+        scored: list[tuple[MLP, float]] = []
+        for net in pop:
+            fit, _ = _eval_parkour_mlp(net, train_specs, env)
+            scored.append((net, fit))
+        scored.sort(key=lambda item: item[1], reverse=True)
+
+        for cand, _ in scored[:3]:
+            vfit, vrate = _eval_parkour_mlp(cand, val_specs, env)
+            if vfit > best_val_fit:
+                best_val_fit = vfit
+                best_val_rate = vrate
+                best_net = cand.clone()
+
+        sigma = cfg.mutation_sigma * (0.30 + 0.70 * (1.0 - gen / max(1, cfg.generations)))
+        next_pop = [n.clone() for n, _ in scored[: cfg.elitism]]
+        while len(next_pop) < cfg.population_size:
+            p1 = max(rng.sample(scored, cfg.tournament_size), key=lambda x: x[1])[0]
+            if rng.random() < cfg.crossover_rate:
+                p2 = max(rng.sample(scored, cfg.tournament_size), key=lambda x: x[1])[0]
+                child = _crossover_weights(p1, p2, rng)
+            else:
+                child = p1.clone()
+            child = _mutate_weights(child, rng, sigma, cfg.mutation_prob)
+            next_pop.append(child)
+        pop = next_pop
+
+    elapsed = time.perf_counter() - t0
+    best_net.metadata = {
+        "primitive": "NeuralParkour",
         "seed": cfg.seed,
         "generations": cfg.generations,
         "param_count": len(best_net.weights),

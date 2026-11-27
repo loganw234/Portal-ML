@@ -42,8 +42,25 @@ AIM_INPUT_NAMES: tuple[str, ...] = (
 )
 AIM_OUTPUT_NAMES: tuple[str, ...] = ("yaw_delta", "fire_gate")
 
+PARKOUR_INPUT_NAMES: tuple[str, ...] = (
+    "dir_fwd",
+    "dir_left",
+    "dist_norm",
+    "on_ground",
+    "vz_norm",
+    "ray_fwd",
+    "ray_fl",
+    "ray_fr",
+    "floor_fwd",
+    "step_clearance",
+    "hazard_ahead",
+    "is_portal",
+)
+PARKOUR_OUTPUT_NAMES: tuple[str, ...] = ("forward", "strafe", "yaw_delta", "jump_gate")
+
 AIM_CONE_DEG = 18.0
 FIRE_GATE_THRESHOLD = 0.25
+JUMP_GATE_THRESHOLD = 0.25
 
 
 def _wrap_deg(angle: float) -> float:
@@ -220,7 +237,9 @@ def resolve_move_target(
             return None
         return _portal_approach_point(snapshot.player.pos, p.pos, p.normal), True
     ent = snapshot.entity_by_id(entity_id)
-    if ent is None or ent.zone_id != snapshot.player.zone_id:
+    if ent is None or (
+        ent.zone_id != snapshot.player.zone_id and bool(snapshot.portal_walls)
+    ):
         return None
     return ent.pos, False
 
@@ -388,3 +407,93 @@ class NeuralAimPolicy:
         if fire_gate > FIRE_GATE_THRESHOLD and abs(err_deg) <= AIM_CONE_DEG:
             return command
         return MoveVector(forward=0.0, strafe=0.0, yaw_delta=yaw_delta)
+
+
+def parkour_egocentric_features(
+    snapshot: BlackboardSnapshot, target_pos: Vec3, is_portal: bool
+) -> list[float]:
+    """Compute the 12 rotation-invariant egocentric + LocalSensors inputs for NeuralParkourPolicy."""
+    p = snapshot.player
+    dx = target_pos.x - p.pos.x
+    dy = target_pos.y - p.pos.y
+    dist = math.hypot(dx, dy)
+    rad = math.radians(p.yaw)
+    cos_y = math.cos(rad)
+    sin_y = math.sin(rad)
+
+    x_body = dx * cos_y + dy * sin_y
+    y_body = -dx * sin_y + dy * cos_y
+    if dist > 1e-6:
+        dir_fwd = x_body / dist
+        dir_left = y_body / dist
+    else:
+        dir_fwd = 0.0
+        dir_left = 0.0
+
+    s = snapshot.sensors
+    rays = s.wall_rays if len(s.wall_rays) == 8 else [1.0] * 8
+    fprobes = s.floor_probes if len(s.floor_probes) == 3 else [0.28, 0.28, 0.28]
+
+    return [
+        dir_fwd,
+        dir_left,
+        min(dist / 512.0, 1.0),
+        1.0 if p.on_ground else 0.0,
+        _clamp(p.vel.z / 300.0, -1.0, 1.0),
+        _clamp(rays[0], 0.0, 1.0),  # forward wall ray
+        _clamp(rays[1], 0.0, 1.0),  # front-left (+45 deg) wall ray
+        _clamp(rays[7], 0.0, 1.0),  # front-right (-45 deg) wall ray
+        _clamp(fprobes[0], 0.0, 1.0),  # forward floor-drop probe
+        _clamp(s.step_clearance, -1.0, 1.0),  # +1 hurdle, 0 clear, -1 tall wall
+        _clamp(s.hazard_ahead, 0.0, 1.0),  # forward acid/hurt proximity
+        1.0 if is_portal else 0.0,
+    ]
+
+
+class NeuralParkourPolicy:
+    """Milestone 7 sensor-equipped neural navigation, obstacle, jumping & hazard skill (208w)."""
+
+    def __init__(self, net: MLP) -> None:
+        if net.input_size != len(PARKOUR_INPUT_NAMES) or net.output_size != len(
+            PARKOUR_OUTPUT_NAMES
+        ):
+            raise ValueError("Invalid MLP shape for NeuralParkourPolicy")
+        self.net = net
+
+    @classmethod
+    def load(cls, path: str | Path) -> NeuralParkourPolicy:
+        net = MLP.load(
+            path,
+            expected_inputs=PARKOUR_INPUT_NAMES,
+            expected_outputs=PARKOUR_OUTPUT_NAMES,
+        )
+        return cls(net)
+
+    def compute_action(
+        self, snapshot: BlackboardSnapshot, command: MotorCommand
+    ) -> LowLevelAction:
+        if not isinstance(command, MoveTo):
+            return LowLevelAction()
+        resolved = resolve_move_target(snapshot, command.entity_id)
+        if resolved is None:
+            return LowLevelAction()
+        target_pos, is_portal = resolved
+        feats = parkour_egocentric_features(snapshot, target_pos, is_portal)
+        fwd, strafe, yaw_delta, jump_gate = self.net.forward(feats)
+        return LowLevelAction(
+            forward=fwd,
+            strafe=strafe,
+            yaw_delta=yaw_delta,
+            jump=(jump_gate > JUMP_GATE_THRESHOLD),
+        )
+
+    def to_command(
+        self, snapshot: BlackboardSnapshot, command: MoveTo
+    ) -> MotorCommand:
+        act = self.compute_action(snapshot, command)
+        return MoveVector(
+            forward=act.forward,
+            strafe=act.strafe,
+            yaw_delta=act.yaw_delta,
+            jump=act.jump,
+        )

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from portal_ml.schema.blackboard import EntityKind, PortalWall, Vec3
+from portal_ml.schema.blackboard import EntityKind, HazardVolume, PortalWall, Vec3
 
 
 @dataclass(frozen=True, slots=True)
@@ -67,6 +67,20 @@ class FizzlerBarrier:
 
 
 @dataclass(frozen=True, slots=True)
+class ObstacleBox:
+    """Solid axis-aligned hurdle (jumpable if max_z <= 42u) or tall wall/partition."""
+
+    id: str
+    zone_id: int
+    min_x: float
+    max_x: float
+    min_y: float
+    max_y: float
+    min_z: float = 0.0
+    max_z: float = 128.0
+
+
+@dataclass(frozen=True, slots=True)
 class ChamberSpec:
     chamber_id: int
     name: str
@@ -82,6 +96,8 @@ class ChamberSpec:
     entities: tuple[EntitySpawn, ...] = ()
     portal_walls: tuple[PortalWall, ...] = ()
     fizzlers: tuple[FizzlerBarrier, ...] = ()
+    obstacles: tuple[ObstacleBox, ...] = ()
+    hazards: tuple[HazardVolume, ...] = ()
     require_all_buttons: bool = False
     max_steps: int = 200
     exit_starts_open: bool = False

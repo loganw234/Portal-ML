@@ -44,6 +44,12 @@ class MotorCommand:
                 forward=float(data.get("forward", 0.0)),
                 strafe=float(data.get("strafe", 0.0)),
                 yaw_delta=float(data.get("yaw_delta", 0.0)),
+                pitch_delta=float(data.get("pitch_delta", 0.0)),
+                jump=bool(data.get("jump", False)),
+                crouch=bool(data.get("crouch", False)),
+                use=bool(data.get("use", False)),
+                fire_blue=bool(data.get("fire_blue", False)),
+                fire_orange=bool(data.get("fire_orange", False)),
             )
         if cmd is MotorCommandKind.GRAB:
             return Grab(entity_id=str(data["entity_id"]))
@@ -75,20 +81,39 @@ class MoveTo(MotorCommand):
 
 @dataclass(frozen=True, slots=True)
 class MoveVector(MotorCommand):
-    """Continuous egocentric body-frame control emitted by Phase-2 neural policies."""
+    """Full human-equivalent body-frame control vector emitted by neural policies."""
 
     forward: float = 0.0  # [-1, 1] along player's facing yaw
     strafe: float = 0.0  # [-1, 1] left of player's facing yaw
     yaw_delta: float = 0.0  # [-1, 1] normalized yaw rate
+    pitch_delta: float = 0.0  # [-1, 1] normalized pitch rate
+    jump: bool = False  # IN_JUMP
+    crouch: bool = False  # IN_DUCK
+    use: bool = False  # IN_USE
+    fire_blue: bool = False  # IN_ATTACK (primary portal gun)
+    fire_orange: bool = False  # IN_ATTACK2 (secondary portal gun)
     kind: MotorCommandKind = MotorCommandKind.MOVE_VEC
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        out: dict[str, Any] = {
             "cmd": self.kind.value,
             "forward": round(self.forward, 4),
             "strafe": round(self.strafe, 4),
             "yaw_delta": round(self.yaw_delta, 4),
         }
+        if self.pitch_delta != 0.0:
+            out["pitch_delta"] = round(self.pitch_delta, 4)
+        if self.jump:
+            out["jump"] = True
+        if self.crouch:
+            out["crouch"] = True
+        if self.use:
+            out["use"] = True
+        if self.fire_blue:
+            out["fire_blue"] = True
+        if self.fire_orange:
+            out["fire_orange"] = True
+        return out
 
 
 @dataclass(frozen=True, slots=True)
@@ -130,12 +155,14 @@ class ShootPortal(MotorCommand):
 
 @dataclass(frozen=True, slots=True)
 class LowLevelAction:
-    """Continuous engine control vector (Phase 2 neural controller output)."""
+    """Continuous engine control vector (Phase 2/7 neural controller output)."""
 
     forward: float = 0.0  # [-1, 1]
     strafe: float = 0.0  # [-1, 1]
-    yaw_delta: float = 0.0  # degrees/tick
-    pitch_delta: float = 0.0  # degrees/tick
+    yaw_delta: float = 0.0  # normalized [-1, 1]
+    pitch_delta: float = 0.0  # normalized [-1, 1]
+    jump: bool = False
+    crouch: bool = False
     use: bool = False
     fire_blue: bool = False
     fire_orange: bool = False

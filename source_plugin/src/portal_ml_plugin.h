@@ -16,7 +16,11 @@ namespace portal_ml {
 // generic BSP + live-edict Blackboard discovery on arbitrary Valve campaign maps.
 class PortalMLPlugin {
 public:
-    bool Load(void* engine_server = nullptr, void* player_info_mgr = nullptr, void* server_game_dll = nullptr);
+    bool Load(
+        void* engine_server = nullptr,
+        void* player_info_mgr = nullptr,
+        void* server_game_dll = nullptr,
+        void* engine_trace = nullptr);
     void Unload();
     void OnLevelInit(const char* map_name);
     void ServerActivate();

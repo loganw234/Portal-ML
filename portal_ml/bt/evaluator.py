@@ -159,7 +159,9 @@ class BehaviorTreeEvaluator:
                 return NodeStatus.RUNNING
 
             ent = resolve_entity(snap, mem, ref)
-            if ent is None or ent.zone_id != snap.player.zone_id:
+            if ent is None or (
+                ent.zone_id != snap.player.zone_id and bool(snap.portal_walls)
+            ):
                 return NodeStatus.FAILURE
             # Textbook BT arrival semantics: non-exit targets succeed once reached.
             # Default 18u preserves the frozen mock yardstick; Source Engine passes 42u/28u

@@ -8,6 +8,7 @@
 
 #ifdef PORTAL_ML_USE_SOURCE_SDK
 #include "eiface.h"
+#include "engine/IEngineTrace.h"
 #include "engine/iserverplugin.h"
 #include "game/server/iplayerinfo.h"
 #endif
@@ -39,9 +40,10 @@ void PortalMLPlugin::SendServerCmd(const std::string& cmd, bool execute_now) con
 #endif
 }
 
-bool PortalMLPlugin::Load(void* engine_server, void* player_info_mgr, void* server_game_dll) {
+bool PortalMLPlugin::Load(
+    void* engine_server, void* player_info_mgr, void* server_game_dll, void* engine_trace) {
     engine_ = engine_server;
-    extractor_.SetEngineInterfaces(engine_server, player_info_mgr, server_game_dll);
+    extractor_.SetEngineInterfaces(engine_server, player_info_mgr, server_game_dll, engine_trace);
     motor_.SetEngineServer(engine_server);
     return ipc_.StartTcp("127.0.0.1", 27500);
 }
@@ -370,9 +372,10 @@ class CPortalMLServerPlugin final : public IServerPluginCallbacks {
 public:
     bool Load(CreateInterfaceFn interfaceFactory, CreateInterfaceFn gameServerFactory) override {
         void* engine = interfaceFactory ? interfaceFactory(INTERFACEVERSION_VENGINESERVER_VERSION_21, nullptr) : nullptr;
+        void* trace = interfaceFactory ? interfaceFactory(INTERFACEVERSION_ENGINETRACE_SERVER, nullptr) : nullptr;
         void* pim = gameServerFactory ? gameServerFactory(INTERFACEVERSION_PLAYERINFOMANAGER, nullptr) : nullptr;
         void* gamedll = gameServerFactory ? gameServerFactory(INTERFACEVERSION_SERVERGAMEDLL_VERSION_9, nullptr) : nullptr;
-        const bool ok = impl_.Load(engine, pim, gamedll);
+        const bool ok = impl_.Load(engine, pim, gamedll, trace);
         if (engine) {
             static_cast<IVEngineServer*>(engine)->LogPrint(
                 ok ? "[Portal-ML] Plugin loaded; IPC listening on 127.0.0.1:27500\n"

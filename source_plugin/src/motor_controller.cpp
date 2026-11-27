@@ -33,6 +33,17 @@ float ExtractJsonFloatField(const std::string& json, const std::string& key, flo
     return static_cast<float>(std::atof(json.c_str() + pos));
 }
 
+bool ExtractJsonBoolField(const std::string& json, const std::string& key, bool fallback = false) {
+    const std::string needle = "\"" + key + "\":";
+    auto pos = json.find(needle);
+    if (pos == std::string::npos) return fallback;
+    pos += needle.size();
+    while (pos < json.size() && (json[pos] == ' ' || json[pos] == '\t')) ++pos;
+    if (json.compare(pos, 4, "true") == 0) return true;
+    if (json.compare(pos, 5, "false") == 0) return false;
+    return fallback;
+}
+
 std::string ExtractJsonStringField(const std::string& json, const std::string& key) {
     const std::string needle = "\"" + key + "\":\"";
     auto pos = json.find(needle);
@@ -106,6 +117,12 @@ MotorCommand MotorController::ParseCommandJson(const std::string& json) {
         cmd.forward = ExtractJsonFloatField(json, "forward", 0.0f);
         cmd.strafe = ExtractJsonFloatField(json, "strafe", 0.0f);
         cmd.yaw_delta = ExtractJsonFloatField(json, "yaw_delta", 0.0f);
+        cmd.pitch_delta = ExtractJsonFloatField(json, "pitch_delta", 0.0f);
+        cmd.jump = ExtractJsonBoolField(json, "jump", false);
+        cmd.crouch = ExtractJsonBoolField(json, "crouch", false);
+        cmd.use = ExtractJsonBoolField(json, "use", false);
+        cmd.fire_blue = ExtractJsonBoolField(json, "fire_blue", false);
+        cmd.fire_orange = ExtractJsonBoolField(json, "fire_orange", false);
     } else if (kind == "grab") {
         cmd.kind = MotorCmdKind::kGrab;
         cmd.entity_id = ExtractJsonStringField(json, "entity_id");
@@ -133,28 +150,51 @@ void MotorController::Execute(
     }
 
     if (cmd.kind == MotorCmdKind::kMoveVec) {
-        // Phase 2 continuous body-frame control from neuroevolved MLP
+        // Phase 2 / Milestone 7 full human-equivalent continuous body-frame control
         float fwd = ClampF(cmd.forward, -1.0f, 1.0f);
         float stf = ClampF(cmd.strafe, -1.0f, 1.0f);
         const float yd = ClampF(cmd.yaw_delta, -1.0f, 1.0f);
+        const float pd = ClampF(cmd.pitch_delta, -1.0f, 1.0f);
         const float mag = std::hypot(fwd, stf);
         if (mag > 1.0f) {
             fwd /= mag;
             stf /= mag;
         }
         const float new_yaw = WrapDeg(state.player_yaw + yd * 36.0f);
-        extractor.SetPlayerEyeAngles(0.0f, new_yaw);
+        const float new_pitch = ClampF(state.player_pitch + pd * 24.0f, -85.0f, 85.0f);
+        extractor.SetPlayerEyeAngles(new_pitch, new_yaw);
 
+        const float speed_scale = cmd.crouch ? 0.55f : 1.0f;
         const float rad = new_yaw / kRadToDeg;
         const float cos_y = std::cos(rad);
         const float sin_y = std::sin(rad);
-        const float target_vx = (fwd * cos_y - stf * sin_y) * kMoveSpeed;
-        const float target_vy = (fwd * sin_y + stf * cos_y) * kMoveSpeed;
+        const float target_vx = (fwd * cos_y - stf * sin_y) * kMoveSpeed * speed_scale;
+        const float target_vy = (fwd * sin_y + stf * cos_y) * kMoveSpeed * speed_scale;
         const float dvx = ClampF(target_vx - state.player_vel.x, -260.0f, 260.0f);
         const float dvy = ClampF(target_vy - state.player_vel.y, -260.0f, 260.0f);
 
-        // Native SendProp m_vecBaseVelocity + FL_BASEVELOCITY actuation (zero ent_fire velocity spam)
+        // Native SendProp m_vecBaseVelocity + FL_BASEVELOCITY actuation
         extractor.ApplyBaseVelocityXY(dvx, dvy);
+        if (cmd.jump && state.player_on_ground) {
+            extractor.ApplyJumpImpulse(268.0f);
+            std::ostringstream jss;
+            jss << "ent_fire !player AddOutput \"basevelocity "
+                << (dvx * 0.72f) << ' ' << (dvy * 0.72f) << " 268\"\n";
+            IssueCmd(jss.str());
+        }
+        if (cmd.crouch != ducking_active_) {
+            ducking_active_ = cmd.crouch;
+            IssueCmd(cmd.crouch ? "+duck\n" : "-duck\n");
+        }
+        if (cmd.use) {
+            IssueCmd("+use; wait 2; -use\n");
+        }
+        if (cmd.fire_blue) {
+            IssueCmd("ent_fire weapon_portalgun FirePortal1\n");
+        }
+        if (cmd.fire_orange) {
+            IssueCmd("ent_fire weapon_portalgun FirePortal2\n");
+        }
         if (!state.held_entity_id.empty()) {
             const float cx = state.player_pos.x;
             const float cy = state.player_pos.y;

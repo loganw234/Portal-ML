@@ -73,6 +73,75 @@ class Vec3:
 
 
 @dataclass(slots=True)
+class LocalSensors:
+    """Egocentric non-visual physical geometry & hazard probes ("touch / LiDAR").
+
+    Populated by both MockPortalEnv (analytic raycasts) and the C++ Source Engine
+    plugin (native IEngineTrace::TraceRay). All distances are normalized to [0, 1].
+    """
+
+    # 8 horizontal rays at [0, +45, +90, +135, 180, -135, -90, -45] deg rel yaw (1.0 = clear >= 256u)
+    wall_rays: list[float] = field(default_factory=lambda: [1.0] * 8)
+    # 3 downward floor-drop probes at [0, +35, -35] deg, 48u ahead (0.28 = flat floor, 1.0 = drop-off)
+    floor_probes: list[float] = field(default_factory=lambda: [0.28, 0.28, 0.28])
+    # Forward hurdle probe: +1.0 = jumpable low step/hurdle, 0.0 = clear, -1.0 = tall unjumpable wall
+    step_clearance: float = 0.0
+    # Forward hazard proximity within 192u (0.0 = clear, 1.0 = touching acid/hurt volume)
+    hazard_ahead: float = 0.0
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "wall_rays": [round(float(v), 3) for v in self.wall_rays],
+            "floor_probes": [round(float(v), 3) for v in self.floor_probes],
+            "step_clearance": round(float(self.step_clearance), 3),
+            "hazard_ahead": round(float(self.hazard_ahead), 3),
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any] | None) -> LocalSensors:
+        if not data:
+            return cls()
+        wr = [float(v) for v in data.get("wall_rays", [1.0] * 8)]
+        fp = [float(v) for v in data.get("floor_probes", [0.28, 0.28, 0.28])]
+        return cls(
+            wall_rays=wr if len(wr) == 8 else ([1.0] * 8),
+            floor_probes=fp if len(fp) == 3 else ([0.28, 0.28, 0.28]),
+            step_clearance=float(data.get("step_clearance", 0.0)),
+            hazard_ahead=float(data.get("hazard_ahead", 0.0)),
+        )
+
+
+@dataclass(slots=True)
+class HazardVolume:
+    """Axis-aligned lethal/damaging volume (e.g. Source trigger_hurt / toxic acid goo)."""
+
+    id: str
+    kind: str  # "acid" | "trigger_hurt" | "fizzler"
+    min_pos: Vec3
+    max_pos: Vec3
+    damage_per_sec: float = 100.0
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "kind": self.kind,
+            "min": self.min_pos.to_list(),
+            "max": self.max_pos.to_list(),
+            "dps": round(self.damage_per_sec, 1),
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> HazardVolume:
+        return cls(
+            id=str(data["id"]),
+            kind=str(data.get("kind", "trigger_hurt")),
+            min_pos=Vec3.from_list(data["min"]),
+            max_pos=Vec3.from_list(data["max"]),
+            damage_per_sec=float(data.get("dps", 100.0)),
+        )
+
+
+@dataclass(slots=True)
 class PlayerState:
     pos: Vec3
     vel: Vec3 = field(default_factory=lambda: Vec3(0.0, 0.0, 0.0))
@@ -80,6 +149,10 @@ class PlayerState:
     pitch: float = 0.0
     zone_id: int = 0
     held_entity_id: str | None = None
+    health: float = 100.0
+    on_ground: bool = True
+    ducking: bool = False
+    water_level: int = 0
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -89,6 +162,10 @@ class PlayerState:
             "pitch": round(self.pitch, 2),
             "zone_id": self.zone_id,
             "held_entity_id": self.held_entity_id,
+            "health": round(self.health, 1),
+            "on_ground": self.on_ground,
+            "ducking": self.ducking,
+            "water_level": self.water_level,
         }
 
     @classmethod
@@ -100,6 +177,10 @@ class PlayerState:
             pitch=float(data.get("pitch", 0.0)),
             zone_id=int(data.get("zone_id", 0)),
             held_entity_id=data.get("held_entity_id"),
+            health=float(data.get("health", 100.0)),
+            on_ground=bool(data.get("on_ground", True)),
+            ducking=bool(data.get("ducking", False)),
+            water_level=int(data.get("water_level", 0)),
         )
 
 
@@ -237,6 +318,8 @@ class BlackboardSnapshot:
     orange_portal: ActivePortal = field(
         default_factory=lambda: ActivePortal(color=PortalColor.ORANGE)
     )
+    sensors: LocalSensors = field(default_factory=LocalSensors)
+    hazards: list[HazardVolume] = field(default_factory=list)
     done: bool = False
     success: bool = False
 
@@ -252,6 +335,8 @@ class BlackboardSnapshot:
                 "blue": self.blue_portal.to_dict(),
                 "orange": self.orange_portal.to_dict(),
             },
+            "sensors": self.sensors.to_dict(),
+            "hazards": [h.to_dict() for h in self.hazards],
             "done": self.done,
             "success": self.success,
         }
@@ -275,6 +360,8 @@ class BlackboardSnapshot:
             ],
             blue_portal=ActivePortal.from_dict(blue_data),
             orange_portal=ActivePortal.from_dict(orange_data),
+            sensors=LocalSensors.from_dict(data.get("sensors")),
+            hazards=[HazardVolume.from_dict(h) for h in data.get("hazards", [])],
             done=bool(data.get("done", False)),
             success=bool(data.get("success", False)),
         )

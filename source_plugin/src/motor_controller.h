@@ -24,6 +24,12 @@ struct MotorCommand {
     float forward = 0.0f;
     float strafe = 0.0f;
     float yaw_delta = 0.0f;
+    float pitch_delta = 0.0f;
+    bool jump = false;
+    bool crouch = false;
+    bool use = false;
+    bool fire_blue = false;
+    bool fire_orange = false;
 };
 
 // Layer 3 (Phase 1): Deterministic scripted motor primitives executed inside Source.
@@ -47,6 +53,7 @@ private:
     mutable int pit_avoid_steps_ = 0;
     mutable float pit_avoid_sign_ = 1.0f;
     mutable std::string pit_avoid_target_;
+    mutable bool ducking_active_ = false;
 };
 
 }  // namespace portal_ml

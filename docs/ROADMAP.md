@@ -72,11 +72,30 @@ Started 2026-11-26. Objective: prove a decoupled 3-layer neuroevolutionary reaso
   - **Live `liquid/lfm2.5-1.2b` (1.2B, 1.25 GB, `records/ablation_layer4_lfm25_2026-11-27.json`):** **`7/7` standard + `1/3` multi-stage** on both scripted (`M2` PASS 42 steps / 2 calls; avg 368 ms/call) and Phase 2B neural (`M2` PASS 65 steps / 2 calls; avg 332 ms/call), 0 fallbacks/warnings — ~28% faster at half the VRAM, exposing a clean Stage-2 multi-button switching ceiling on M1/M3 for LoRA distillation.
 - Verified `OpenAICompatibleLLMPlanner` end-to-end against an in-process loopback OpenAI HTTP server (including `<think>` stripping, dynamic `json_schema` verification, HTTP 400 fallback, and unreachable-server fallback) in `tests/test_layer4_planner.py`.
 
+### Milestone 7 — Human-Equivalent Physical Connections & Neuroevolved Parkour/Hazard Skill (Done, 2026-11-27)
+- **Layer-1 human-equivalent non-visual perception (Python + 32-bit C++ Source Engine parity):**
+  - Extended `PlayerState` (`portal_ml/schema/blackboard.py`, `source_plugin/src/blackboard_extractor.{h,cpp}`) with live proprioception (`health`, `on_ground`, `ducking`, `water_level`) read natively from Source SendProps (`m_iHealth`, `m_fFlags` `FL_ONGROUND`/`FL_DUCKING`, `m_nWaterLevel`).
+  - Added 13-channel egocentric `LocalSensors` ("non-visual LiDAR/touch": 8 chest-height horizontal `wall_rays`, 3 forward `floor_probes`, knee-vs-chest `step_clearance`, and `hazard_ahead`) computed analytically in `MockPortalEnv` and natively via **`IEngineTrace` (`EngineTraceServer003`, `SkipPlayerFilter`)** in `source_plugin` (zero extra `.lib` dependencies).
+  - Added `HazardVolume` (`trigger_hurt` / acid goo) + `ObstacleBox` (solid tall walls & jumpable hurdles) to `MockPortalEnv` and BSP Lump 14 (`LUMP_MODELS`) `trigger_hurt` AABB discovery to `BspScanner`.
+- **Layer-3 full human body actuators (Python + C++ parity):**
+  - Extended `MoveVector` (`portal_ml/motor/primitives.py`, `MockPortalEnv`, `motor_controller.{h,cpp}`) to full 6-DOF body + interaction control: `forward`, `strafe`, `yaw_delta`, `pitch_delta`, `jump`, `crouch`, `use`, `fire_blue`, `fire_orange` — backward-compatible with all Phase-2 checkpoints.
+  - Added 3D jump/gravity physics (`sv_gravity 600`, `JUMP_SPEED 240`, hurdle clearance, cross-pit gap jumping, acid trench jumping) in `MockPortalEnv` and native jump impulse (`m_vecBaseVelocity[2]` + `m_hGroundEntity` + `AddOutput basevelocity`) in `source_plugin`.
+- **Live Portal 1 physical verification (`portal_ml_plugin.dll` rebuilt & installed):**
+  - `portal_ml_5chambers` (`records/live_physical_connections_2026-11-27.json`): exact live `IEngineTrace` geometry (`wall_rays=[1.0, 0.707, 0.5, 0.353, 0.25, ...]`, `floor_probes=[0.281, 0.281, 0.281]`), SendProp proprioception (`hp=100`, `on_ground=True`), and real physical jump arc (**`base_z=0.03u -> max_z=60.51u`, `delta_z=+60.48u`, `saw_airborne=True`, `pitch=-6.0°`**), plus **7/7 PASS** live Phase-2B regression.
+  - Unmodified Valve campaign map **`testchmb_a_08`** (`records/live_testchmb_a08_physical_2026-11-27.json`): auto-discovered 9 entities & 143 portal surfaces, traced the circular glass entry elevator (`wall_rays=[0.215..0.285]`, `floor_probes=[0.37, 0.37, 0.37]`, closed door `step=-1.0`), and executed live jump (`base_z=146.56u -> max_z=207.05u`, `delta_z=+60.48u`).
+- **Neuroevolved `NeuralParkourPolicy` (`champions/parkour_mlp.json`, `12->12->4`, 208 weights):**
+  - Evolved from random weights (`scripts/train_parkour_skill.py --seed 11`, **100.0% validation** across 6 randomized synthetic 3D physics families: open field, tall wall slalom, low hurdle vault, toxic acid trench jump, platform gap jump, flush portal-wall entry).
+  - **Controlled 13-chamber ablation (`scripts/ablate_parkour.py`, `records/ablation_parkour_2026-11-27.json`) underneath frozen `champions/seed7_decoupled.bt`:**
+    - Phase 1 scripted `MoveTo`: `7/7` standard, `3/3` multi-stage (L4), **`0/3` parkour (P1–P3)**
+    - Phase 2B blind `NeuralMoveTo (83w+44w)`: `7/7` standard, `3/3` multi-stage (L4), **`0/3` parkour (P1–P3)**
+    - Milestone 7 sensor `NeuralParkour (208w+44w)`: **`7/7` standard, `3/3` multi-stage (L4), `3/3` parkour** (`P1` Partition Slalom 19 steps / 100 HP; `P2` Hurdle & Acid Trench 22 steps / 75 HP; `P3` Gap Jump & Timed Vault 28 steps / 100 HP) — **13/13 PASS**.
+  - Honest live transfer observation (`records/live_7ch_parkour_2026-11-27.jsonl`): zero-shot `NeuralParkour` cleared **4/7 live in Portal 1** (`Ch1` 8 steps, `Ch2` 11 steps, `Ch3` 42 steps, `Ch4` 122 steps) while jumping over cubes/portals on Ch5–7 because `SkipPlayerFilter` traces knee-height loose cubes as `step_clearance=+1.0` — motivating target-aware ray filtering & Layer-4 `skill_mode` routing in Milestone 8.
+
 ---
 
 ## Upcoming Milestones (Worked One at a Time)
 
-### Milestone 7 — Multi-Room Live Campaign Maps, Native `+use` Motor Hardening & Small-Model LoRA Distillation
-- Run live 4-layer (`phi-4-mini-instruct` / `rule`) ablations on multi-room Valve campaign maps (`testchmb_a_02` Rooms 1–2, `testchmb_a_05`).
-- Replace `point_teleport` cube drops with native `+use` / `CPlayerPickupController` carry-and-drop in `source_plugin/src/motor_controller.cpp` for ~100% live drop repeatability.
-- Build JSONL trace distillation dataset (`records/*.jsonl` -> `(symbolic_digest, semantic_action)`) and LoRA-finetune `LFM2.5-1.2B` to close its M1/M3 Stage-2 switching gap (targeting 10/10 at ~300 ms / 1.25 GB).
+### Milestone 8 — Multi-Skill Routing (`skill_mode`), Native `+use` Carry/Drop & `LFM2.5-1.2B` LoRA Distillation
+- Add target-aware ray filtering (ignoring the targeted `cube`/button during `Grab`/`Drop`) + Layer-4 `skill_mode` routing (`NeuralMoveTo` vs `NeuralParkour` vs future `NeuralFling`) so `NeuralParkour` hits 7/7 live in Portal 1 too.
+- Replace `point_teleport` cube drops with native `+use` / `CPlayerPickupController` carry-and-drop in `source_plugin/src/motor_controller.cpp` and test live 4-layer runs (`phi-4-mini-instruct @ 4k`) on multi-room campaign maps (`testchmb_a_02` Rooms 1–2, `testchmb_a_05`).
+- Build JSONL trace distillation dataset (`records/*.jsonl` -> `(symbolic_digest, semantic_action)`) and LoRA-finetune `LFM2.5-1.2B` (from `16/20` -> `20/20` matching `Phi-4-mini` at 1.25 GB).

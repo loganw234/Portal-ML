@@ -54,15 +54,22 @@ The core claim is architectural: separating *what* subgoal entity to pursue from
     - **4-layer live `phi-4-mini-instruct` (3.8B, 2.49 GB via LM Studio, `records/ablation_layer4_phi4mini_2026-11-27.json`):** **`7/7` standard + `3/3` multi-stage on BOTH scripted (`116/66/91` steps, 23 calls, avg 470 ms/call) and Phase 2B neural (`81/82/152` steps, 22 calls, avg 461 ms/call)** — **20/20 zero-shot PASS**, `0` fallbacks, `0` warnings.
     - **4-layer live `liquid/lfm2.5-1.2b` (1.2B, 1.25 GB via LM Studio, `records/ablation_layer4_lfm25_2026-11-27.json`):** **`7/7` standard + `1/3` multi-stage** on both scripted (`M2` PASS 42 steps; avg 368 ms/call) and Phase 2B neural (`M2` PASS 65 steps; avg 332 ms/call, ~28% faster at half the VRAM), `0` fallbacks/warnings — exposing a clean Stage-2 switching target for Milestone 7 LoRA distillation.
   - Wired `--planner {none,rule,llm}` into `scripts/replay_live.py` and documented full comparison & setup in [docs/FOUR_LAYER_ARCHITECTURE.md](docs/FOUR_LAYER_ARCHITECTURE.md).
+- **Human-equivalent physical connections (Python + C++ Source Engine) & neuroevolved `NeuralParkourPolicy` (Milestone 7, 2026-11-27).**
+  - Upgraded Layer 1 (`PlayerState` + `LocalSensors` + `HazardVolume`) with live proprioception (`health`, `on_ground`, `ducking`, `water_level`), 13-channel egocentric non-visual LiDAR (`8` wall rays, `3` floor-drop probes, `step_clearance`, `hazard_ahead`) via native Source **`IEngineTrace` (`EngineTraceServer003`)**, and BSP `trigger_hurt` AABB discovery.
+  - Upgraded Layer 3 (`MoveVector`) to full 6-DOF human body + interaction actuation (`forward`, `strafe`, `yaw_delta`, `pitch_delta`, `jump`, `crouch`, `use`, `fire_blue`, `fire_orange`) across `MockPortalEnv` and the 32-bit C++ plugin.
+  - Verified live inside Portal 1 (`portal_ml_5chambers`, `records/live_physical_connections_2026-11-27.json` & unmodified Valve **`testchmb_a_08`**, `records/live_testchmb_a08_physical_2026-11-27.json`): live `IEngineTrace` wall/elevator/floor raycasts, real physical jump arc (**`delta_z = +60.48u`**, `saw_airborne = True`, `pitch = -6.0°`), and **7/7 PASS** live Phase-2B regression.
+  - Evolved sensor-equipped **`champions/parkour_mlp.json`** (`12->12->4`, **208 weights**, 100.0% synthetic validation across 6 randomized 3D physics families). Controlled 13-chamber ablation (`scripts/ablate_parkour.py`, `records/ablation_parkour_2026-11-27.json`) underneath frozen `seed7_decoupled.bt`:
+    - Scripted `MoveTo` & blind `NeuralMoveTo (83w+44w)`: `7/7` standard, `3/3` multi-stage, **`0/3` parkour (`P1–P3`)**.
+    - Sensor `NeuralParkour (208w+44w)`: **`7/7` standard, `3/3` multi-stage, `3/3` parkour** (`P1` Partition Slalom 19 steps, `P2` Hurdle & Acid Trench 22 steps, `P3` Gap Jump & Timed Vault 28 steps) — **13/13 PASS** (live zero-shot Portal 1 transfer: `4/7` on Ch1–4; Ch5–7 cube/button knee-height ray filtering queued for Milestone 8).
 
-What comes next is tracked in [docs/ROADMAP.md](docs/ROADMAP.md), [docs/REAL_GAME_ANALYSIS.md](docs/REAL_GAME_ANALYSIS.md), and [docs/FOUR_LAYER_ARCHITECTURE.md](docs/FOUR_LAYER_ARCHITECTURE.md): multi-room live campaign runs (`testchmb_a_02` Rooms 1–2, `testchmb_a_05`), native `+use` cube carry-and-drop hardening, and `LFM2.5-1.2B` LoRA trace distillation (Milestone 7).
+What comes next is tracked in [docs/ROADMAP.md](docs/ROADMAP.md), [docs/REAL_GAME_ANALYSIS.md](docs/REAL_GAME_ANALYSIS.md), and [docs/FOUR_LAYER_ARCHITECTURE.md](docs/FOUR_LAYER_ARCHITECTURE.md): multi-skill routing (`skill_mode`), target-aware ray filtering, native `+use` cube carry/drop, and `LFM2.5-1.2B` LoRA distillation (Milestone 8).
 
 ## The front door
 
     python tools/check.py
     python tools/check.py --control
 
-Runs every gate (personal-path guard, Python↔C++ chamber 1–7 coordinate parity, held-out Chambers 5–7 isolation, `.vmf` integrity, Phase-2 checkpoint schema validation, and the 33-test unit/integration suite) and ends with `VERDICT: PASS`. Use `--quick` to skip the full evolution test during fast edits.
+Runs every gate (personal-path guard, Python↔C++ chamber 1–7 coordinate parity, held-out Chambers 5–7 isolation, `.vmf` integrity, Phase-2 checkpoint schema validation, and the 37-test unit/integration suite) and ends with `VERDICT: PASS`. Use `--quick` to skip the full evolution test during fast edits.
 
 ## Architecture
 

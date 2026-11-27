@@ -7,17 +7,21 @@ and lowers them through pre-trained neuroevolved MLPs into continuous MoveVector
 
 from __future__ import annotations
 
-from portal_ml.motor.neural import NeuralAimPolicy, NeuralMoveToPolicy
+from portal_ml.motor.neural import (
+    NeuralAimPolicy,
+    NeuralMoveToPolicy,
+    NeuralParkourPolicy,
+)
 from portal_ml.motor.primitives import MotorCommand, MoveTo, ShootPortal
 from portal_ml.schema.blackboard import BlackboardSnapshot
 
 
 class HybridMotorController:
-    """Translates symbolic Layer-2 MotorCommands using optional Phase-2 neural policies."""
+    """Translates symbolic Layer-2 MotorCommands using optional Phase-2/M7 neural policies."""
 
     def __init__(
         self,
-        moveto_policy: NeuralMoveToPolicy | None = None,
+        moveto_policy: NeuralMoveToPolicy | NeuralParkourPolicy | None = None,
         aim_policy: NeuralAimPolicy | None = None,
     ) -> None:
         self.moveto_policy = moveto_policy

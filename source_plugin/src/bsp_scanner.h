@@ -15,6 +15,14 @@ struct DiscoveredEntity {
     Vec3 spawn_pos{};
 };
 
+struct HazardRecord {
+    std::string id;
+    std::string kind;  // "acid" | "trigger_hurt"
+    Vec3 min_pos{};
+    Vec3 max_pos{};
+    float dps = 100.0f;
+};
+
 struct BspMapData {
     std::string map_name;
     bool loaded = false;
@@ -25,6 +33,7 @@ struct BspMapData {
     float player_spawn_yaw = 0.0f;
     std::vector<DiscoveredEntity> entities;
     std::vector<PortalWallRecord> portal_surfaces;
+    std::vector<HazardRecord> hazards;
 };
 
 // Pure C++17 Source Engine BSP (v19/v20) scanner for generic live-map discovery.

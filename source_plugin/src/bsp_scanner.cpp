@@ -21,6 +21,7 @@ constexpr int kLumpTexInfo = 6;
 constexpr int kLumpFaces = 7;
 constexpr int kLumpEdges = 12;
 constexpr int kLumpSurfEdges = 13;
+constexpr int kLumpModels = 14;
 constexpr int kLumpTexDataStringData = 43;
 constexpr int kLumpTexDataStringTable = 44;
 
@@ -47,6 +48,15 @@ struct DTexData {
     int32_t height;
     int32_t view_width;
     int32_t view_height;
+};
+
+struct DModel {
+    float mins[3];
+    float maxs[3];
+    float origin[3];
+    int32_t headnode;
+    int32_t firstface;
+    int32_t numfaces;
 };
 
 struct DVertex {
@@ -113,7 +123,7 @@ Vec3 ParseVec3(const std::string& s) {
     return v;
 }
 
-void ParseEntitiesLump(const char* data, size_t len, BspMapData& out) {
+void ParseEntitiesLump(const char* data, size_t len, const DModel* models, size_t n_models, BspMapData& out) {
     size_t i = 0;
     bool has_spawn = false;
     int idx_cube = 0;
@@ -122,6 +132,7 @@ void ParseEntitiesLump(const char* data, size_t len, BspMapData& out) {
     int idx_exit = 0;
     int idx_elev = 0;
     int idx_fizz = 0;
+    int idx_hurt = 0;
     bool saw_portalgun = false;
 
     while (i < len) {
@@ -202,6 +213,16 @@ void ParseEntitiesLump(const char* data, size_t len, BspMapData& out) {
         } else if (cls == "trigger_portal_cleanser") {
             const std::string id = tname.empty() ? ("bsp_fizzler_" + std::to_string(idx_fizz++)) : tname;
             out.entities.push_back({id, "fizzler", cls, model, org});
+        } else if (cls == "trigger_hurt" && models && model.size() > 1 && model[0] == '*') {
+            const int midx = std::atoi(model.c_str() + 1);
+            if (midx > 0 && static_cast<size_t>(midx) < n_models) {
+                const DModel& dm = models[midx];
+                const std::string id = tname.empty() ? ("bsp_hurt_" + std::to_string(idx_hurt++)) : tname;
+                const float dps = kv.count("damage") ? static_cast<float>(std::atof(kv["damage"].c_str())) : 100.0f;
+                Vec3 mn{org.x + dm.mins[0], org.y + dm.mins[1], org.z + dm.mins[2]};
+                Vec3 mx{org.x + dm.maxs[0], org.y + dm.maxs[1], org.z + dm.maxs[2]};
+                out.hazards.push_back({id, "trigger_hurt", mn, mx, dps > 0.0f ? dps : 100.0f});
+            }
         }
     }
 }
@@ -234,10 +255,19 @@ bool BspScanner::LoadFromFile(const std::string& bsp_path, const std::string& ma
                static_cast<size_t>(l.fileofs) + static_cast<size_t>(l.filelen) <= buf.size();
     };
 
+    const DModel* models_ptr = nullptr;
+    size_t n_models = 0;
+    if (valid_lump(kLumpModels)) {
+        models_ptr = reinterpret_cast<const DModel*>(buf.data() + lumps[kLumpModels].fileofs);
+        n_models = static_cast<size_t>(lumps[kLumpModels].filelen) / sizeof(DModel);
+    }
+
     if (valid_lump(kLumpEntities)) {
         ParseEntitiesLump(
             reinterpret_cast<const char*>(buf.data() + lumps[kLumpEntities].fileofs),
             static_cast<size_t>(lumps[kLumpEntities].filelen),
+            models_ptr,
+            n_models,
             out);
     }
 

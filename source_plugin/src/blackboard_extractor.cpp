@@ -8,10 +8,13 @@
 #include <sstream>
 
 #ifdef PORTAL_ML_USE_SOURCE_SDK
+#include "bspflags.h"
+#include "cmodel.h"
 #include "const.h"
 #include "eiface.h"
 #include "edict.h"
 #include "engine/ICollideable.h"
+#include "engine/IEngineTrace.h"
 #include "game/server/iplayerinfo.h"
 #include "iserverunknown.h"
 #include "server_class.h"
@@ -194,10 +197,11 @@ int ClassifyZone(const ChamberLayout& layout, float x, float y) {
 }
 
 void BlackboardExtractor::SetEngineInterfaces(
-    void* engine_server, void* player_info_mgr, void* server_game_dll) {
+    void* engine_server, void* player_info_mgr, void* server_game_dll, void* engine_trace) {
     engine_ = engine_server;
     player_info_mgr_ = player_info_mgr;
     server_game_dll_ = server_game_dll;
+    engine_trace_ = engine_trace;
 }
 
 void BlackboardExtractor::SetGenericMap(const BspMapData* map_data) {
@@ -224,6 +228,9 @@ void BlackboardExtractor::ResolveNetProps() {
                     netprop_player_vel_z_ = oz;
                     netprop_player_basevel_ = FindPropInTable(sc->m_pTable, "m_vecBaseVelocity");
                     netprop_player_flags_ = FindPropInTable(sc->m_pTable, "m_fFlags");
+                    netprop_player_health_ = FindPropInTable(sc->m_pTable, "m_iHealth");
+                    netprop_player_waterlevel_ = FindPropInTable(sc->m_pTable, "m_nWaterLevel");
+                    netprop_ground_entity_ = FindPropInTable(sc->m_pTable, "m_hGroundEntity");
                     netprop_eye_pitch_ = FindPropInTable(sc->m_pTable, "m_angEyeAngles[0]");
                     netprop_eye_yaw_ = FindPropInTable(sc->m_pTable, "m_angEyeAngles[1]");
                     break;
@@ -288,6 +295,177 @@ void BlackboardExtractor::ApplyBaseVelocityXY(float dvx, float dvy) {
 #else
     (void)dvx;
     (void)dvy;
+#endif
+}
+
+void BlackboardExtractor::ApplyJumpImpulse(float vz) {
+    ResolveNetProps();
+#ifdef PORTAL_ML_USE_SOURCE_SDK
+    auto* engine = static_cast<IVEngineServer*>(engine_);
+    if (!engine || netprop_player_vel_z_ < 0) return;
+    edict_t* player_ed = engine->PEntityOfEntIndex(1);
+    if (!player_ed || player_ed->IsFree()) return;
+    IServerUnknown* unk = player_ed->GetUnknown();
+    if (!unk) return;
+    auto* base = reinterpret_cast<uint8_t*>(unk->GetBaseEntity());
+    if (!base) return;
+    *reinterpret_cast<float*>(base + netprop_player_vel_z_) = vz;
+    if (netprop_player_basevel_ >= 0) {
+        auto* bv = reinterpret_cast<float*>(base + netprop_player_basevel_);
+        bv[2] = vz;
+    }
+    if (netprop_ground_entity_ >= 0) {
+        *reinterpret_cast<int*>(base + netprop_ground_entity_) = -1;
+    }
+    if (netprop_player_flags_ >= 0) {
+        auto* flags = reinterpret_cast<int*>(base + netprop_player_flags_);
+        *flags &= ~FL_ONGROUND;
+        *flags |= FL_BASEVELOCITY;
+    }
+#else
+    (void)vz;
+#endif
+}
+
+void BlackboardExtractor::ReadPlayerProprioception(BlackboardState& state) {
+    ResolveNetProps();
+#ifdef PORTAL_ML_USE_SOURCE_SDK
+    auto* engine = static_cast<IVEngineServer*>(engine_);
+    if (!engine) return;
+    edict_t* player_ed = engine->PEntityOfEntIndex(1);
+    if (!player_ed || player_ed->IsFree()) return;
+    IServerUnknown* unk = player_ed->GetUnknown();
+    if (!unk) return;
+    const auto* base = reinterpret_cast<const uint8_t*>(unk->GetBaseEntity());
+    if (!base) return;
+    if (netprop_player_health_ >= 0) {
+        state.player_health = static_cast<float>(*reinterpret_cast<const int*>(base + netprop_player_health_));
+    }
+    if (netprop_player_flags_ >= 0) {
+        const int flags = *reinterpret_cast<const int*>(base + netprop_player_flags_);
+        state.player_on_ground = (flags & FL_ONGROUND) != 0;
+        state.player_ducking = (flags & FL_DUCKING) != 0;
+    }
+    if (netprop_player_waterlevel_ >= 0) {
+        state.player_water_level = static_cast<int>(*reinterpret_cast<const uint8_t*>(base + netprop_player_waterlevel_));
+    }
+#else
+    (void)state;
+#endif
+}
+
+void BlackboardExtractor::ComputeLocalSensors(BlackboardState& state) {
+#ifdef PORTAL_ML_USE_SOURCE_SDK
+    auto* trace = static_cast<IEngineTrace*>(engine_trace_);
+    if (!trace) return;
+
+    IHandleEntity* player_handle = nullptr;
+    if (auto* engine = static_cast<IVEngineServer*>(engine_)) {
+        if (edict_t* ped = engine->PEntityOfEntIndex(1); ped && !ped->IsFree()) {
+            player_handle = ped->GetUnknown();
+        }
+    }
+    struct SkipPlayerFilter final : public CTraceFilter {
+        IHandleEntity* skip = nullptr;
+        bool ShouldHitEntity(IHandleEntity* ent, int /*mask*/) override { return ent != skip; }
+    } filter;
+    filter.skip = player_handle;
+    const float yaw_rad = state.player_yaw * (3.14159265f / 180.0f);
+    const float chest_z = state.player_pos.z + 36.0f;
+    const float knee_z = state.player_pos.z + 18.0f;
+    const float high_z = state.player_pos.z + 52.0f;
+    constexpr float kRayRange = 256.0f;
+    constexpr float kHazardRange = 192.0f;
+
+    // 1. 8 horizontal obstacle rays at chest height
+    static const float kRelAngles[8] = {0.0f, 45.0f, 90.0f, 135.0f, 180.0f, -135.0f, -90.0f, -45.0f};
+    for (int i = 0; i < 8; ++i) {
+        const float ang = yaw_rad + kRelAngles[i] * (3.14159265f / 180.0f);
+        Vector start(state.player_pos.x, state.player_pos.y, chest_z);
+        Vector end(start.x + std::cos(ang) * kRayRange, start.y + std::sin(ang) * kRayRange, chest_z);
+        Ray_t ray;
+        ray.Init(start, end);
+        trace_t tr;
+        trace->TraceRay(ray, MASK_PLAYERSOLID, &filter, &tr);
+        state.sensors.wall_rays[i] = tr.fraction;
+    }
+
+    // 2. 3 downward floor-drop probes at 48u ahead ([0, +35, -35] deg)
+    static const float kFloorAngles[3] = {0.0f, 35.0f, -35.0f};
+    for (int i = 0; i < 3; ++i) {
+        const float ang = yaw_rad + kFloorAngles[i] * (3.14159265f / 180.0f);
+        const float px = state.player_pos.x + std::cos(ang) * 48.0f;
+        const float py = state.player_pos.y + std::sin(ang) * 48.0f;
+        Vector start(px, py, chest_z);
+        Vector end(px, py, chest_z - 128.0f);
+        Ray_t ray;
+        ray.Init(start, end);
+        trace_t tr;
+        trace->TraceRay(ray, MASK_PLAYERSOLID, &filter, &tr);
+        state.sensors.floor_probes[i] = tr.fraction;
+    }
+
+    // 3. Forward knee-vs-high hurdle clearance probe (72u ahead)
+    {
+        const float fdx = std::cos(yaw_rad) * 72.0f;
+        const float fdy = std::sin(yaw_rad) * 72.0f;
+        Ray_t r_knee, r_high;
+        r_knee.Init(
+            Vector(state.player_pos.x, state.player_pos.y, knee_z),
+            Vector(state.player_pos.x + fdx, state.player_pos.y + fdy, knee_z));
+        r_high.Init(
+            Vector(state.player_pos.x, state.player_pos.y, high_z),
+            Vector(state.player_pos.x + fdx, state.player_pos.y + fdy, high_z));
+        trace_t tr_k, tr_h;
+        trace->TraceRay(r_knee, MASK_PLAYERSOLID, &filter, &tr_k);
+        trace->TraceRay(r_high, MASK_PLAYERSOLID, &filter, &tr_h);
+        if (tr_k.fraction < 0.94f && tr_h.fraction >= 0.94f) {
+            state.sensors.step_clearance = 1.0f;
+        } else if (tr_k.fraction < 0.94f && tr_h.fraction < 0.94f) {
+            state.sensors.step_clearance = -1.0f;
+        } else {
+            state.sensors.step_clearance = 0.0f;
+        }
+    }
+
+    // 4. Forward liquid/slime + BSP trigger_hurt hazard proximity probe
+    float best_hazard = 0.0f;
+    {
+        Vector start(state.player_pos.x, state.player_pos.y, state.player_pos.z + 12.0f);
+        Vector end(
+            start.x + std::cos(yaw_rad) * kHazardRange,
+            start.y + std::sin(yaw_rad) * kHazardRange,
+            state.player_pos.z - 48.0f);
+        Ray_t ray;
+        ray.Init(start, end);
+        trace_t tr;
+        trace->TraceRay(ray, CONTENTS_SLIME | CONTENTS_WATER, &filter, &tr);
+        if (tr.fraction < 1.0f) {
+            best_hazard = 1.0f - tr.fraction;
+        }
+    }
+    const float fdx = std::cos(yaw_rad);
+    const float fdy = std::sin(yaw_rad);
+    for (const auto& h : state.hazards) {
+        if (state.player_pos.x >= h.min_pos.x && state.player_pos.x <= h.max_pos.x &&
+            state.player_pos.y >= h.min_pos.y && state.player_pos.y <= h.max_pos.y) {
+            best_hazard = 1.0f;
+            break;
+        }
+        // Sample along forward ray up to kHazardRange
+        for (float d = 16.0f; d <= kHazardRange; d += 16.0f) {
+            const float sx = state.player_pos.x + fdx * d;
+            const float sy = state.player_pos.y + fdy * d;
+            if (sx >= h.min_pos.x && sx <= h.max_pos.x && sy >= h.min_pos.y && sy <= h.max_pos.y) {
+                const float prox = 1.0f - (d / kHazardRange);
+                if (prox > best_hazard) best_hazard = prox;
+                break;
+            }
+        }
+    }
+    state.sensors.hazard_ahead = best_hazard;
+#else
+    (void)state;
 #endif
 }
 
@@ -408,7 +586,7 @@ BlackboardState BlackboardExtractor::Extract(int chamber_id, int tick, float dt)
     state.orange_portal = tracked_orange_;
 
     if (pedestal_timer_ > 0.0f) {
-        pedestal_timer_ = std::max(0.0f, pedestal_timer_ - dt);
+        pedestal_timer_ = (std::max)(0.0f, pedestal_timer_ - dt);
     }
 
     Vec3 live_cube_pos = layout.cube_spawn;
@@ -558,6 +736,8 @@ BlackboardState BlackboardExtractor::Extract(int chamber_id, int tick, float dt)
         state.success = false;
     }
 
+    ReadPlayerProprioception(state);
+    ComputeLocalSensors(state);
     return state;
 }
 
@@ -868,11 +1048,19 @@ BlackboardState BlackboardExtractor::ExtractGeneric(int tick, float dt) {
     ensure_portal_wall(state.blue_portal);
     ensure_portal_wall(state.orange_portal);
 
+    if (generic_map_) {
+        for (const auto& hz : generic_map_->hazards) {
+            state.hazards.push_back({hz.id, hz.kind, hz.min_pos, hz.max_pos, hz.dps});
+        }
+    }
+
     if (!state.done && tick >= 400) {
         state.done = true;
         state.success = false;
     }
 
+    ReadPlayerProprioception(state);
+    ComputeLocalSensors(state);
     return state;
 }
 
@@ -892,7 +1080,11 @@ std::string BlackboardExtractor::ToJson(const BlackboardState& s) {
        << ",\"zone_id\":" << s.player_zone_id
        << ",\"held_entity_id\":";
     WriteNullableString(os, s.held_entity_id);
-    os << "},\"entities\":[";
+    os << ",\"health\":" << s.player_health
+       << ",\"on_ground\":" << (s.player_on_ground ? "true" : "false")
+       << ",\"ducking\":" << (s.player_ducking ? "true" : "false")
+       << ",\"water_level\":" << s.player_water_level
+       << "},\"entities\":[";
 
     for (size_t i = 0; i < s.entities.size(); ++i) {
         const auto& e = s.entities[i];
@@ -925,7 +1117,29 @@ std::string BlackboardExtractor::ToJson(const BlackboardState& s) {
     WritePortal(os, s.blue_portal);
     os << ",\"orange\":";
     WritePortal(os, s.orange_portal);
-    os << "},\"done\":" << (s.done ? "true" : "false")
+    os << "},\"sensors\":{\"wall_rays\":[";
+    for (int i = 0; i < 8; ++i) {
+        if (i > 0) os << ',';
+        os << s.sensors.wall_rays[i];
+    }
+    os << "],\"floor_probes\":[";
+    for (int i = 0; i < 3; ++i) {
+        if (i > 0) os << ',';
+        os << s.sensors.floor_probes[i];
+    }
+    os << "],\"step_clearance\":" << s.sensors.step_clearance
+       << ",\"hazard_ahead\":" << s.sensors.hazard_ahead
+       << "},\"hazards\":[";
+    for (size_t i = 0; i < s.hazards.size(); ++i) {
+        const auto& hz = s.hazards[i];
+        if (i > 0) os << ',';
+        os << "{\"id\":\"" << hz.id << "\",\"kind\":\"" << hz.kind << "\",\"min\":";
+        WriteVec3(os, hz.min_pos);
+        os << ",\"max\":";
+        WriteVec3(os, hz.max_pos);
+        os << ",\"dps\":" << hz.dps << '}';
+    }
+    os << "],\"done\":" << (s.done ? "true" : "false")
        << ",\"success\":" << (s.success ? "true" : "false") << '}';
 
     return os.str();
