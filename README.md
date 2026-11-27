@@ -4,6 +4,16 @@ A hybrid neuroevolutionary reasoning agent for *Portal* (Source Engine) that dec
 
 The core claim is architectural: separating *what* subgoal entity to pursue from *how* to reach and interact with `target` lets an agent trained strictly on Chambers 1–4 generalize zero-shot to a held-out rotated puzzle (Chamber 5) that combines cubes, buttons, and portals for the first time.
 
+## Trajectory & Approach Visualizations
+
+Generated directly from recorded live Portal 1 and simulator traces via `python scripts/render_paths.py` (individual per-chamber SVGs in [`docs/images/chambers/`](docs/images/chambers/)):
+
+![Portal-ML Combined Path Comparisons Across All 4 Layers](docs/images/portal_ml_paths_combined.svg)
+
+**Unmodified Valve Campaign Chamber (`testchmb_a_02` Room 1 / Test Chamber 04) — Live Portal 1 Zero-Shot Solve:**
+
+![Live Portal 1 Zero-Shot Solve on Unmodified Valve testchmb_a_02](docs/images/live_testchmb_a02_solve.svg)
+
 ## Status (2026-11-27)
 
 - **3-layer PoC and 5-chamber mock 3D simulator built and measured.** Pure Python 3.12 (zero external dependencies) runs at **1,978 episodes/sec** (**42,734 ticks/sec**) on one desktop core (`python scripts/benchmark_sim.py --episodes 5000`).
@@ -69,7 +79,7 @@ What comes next is tracked in [docs/ROADMAP.md](docs/ROADMAP.md), [docs/REAL_GAM
     python tools/check.py
     python tools/check.py --control
 
-Runs every gate (personal-path guard, Python↔C++ chamber 1–7 coordinate parity, held-out Chambers 5–7 isolation, `.vmf` integrity, Phase-2 checkpoint schema validation, and the 37-test unit/integration suite) and ends with `VERDICT: PASS`. Use `--quick` to skip the full evolution test during fast edits.
+Runs every gate (personal-path guard, Python↔C++ chamber 1–7 coordinate parity, held-out Chambers 5–7 isolation, `.vmf` integrity, Phase-2 checkpoint schema validation, and the 39-test unit/integration suite) and ends with `VERDICT: PASS`. Use `--quick` to skip the full evolution test during fast edits.
 
 ## Architecture
 
@@ -104,6 +114,12 @@ python scripts/ablation_study.py --seeds 1 7 13 21 42 --pop 120 --gens 120
 # Benchmark mock simulator throughput
 python scripts/benchmark_sim.py --episodes 5000
 
+# Render combined 3x3 showcase, live testchmb_a_02 SVG, and individual chamber SVGs
+python scripts/render_paths.py
+
+# Render any custom live or mock JSONL trace
+python scripts/render_paths.py --trace records/live_testchmb_a02_solve_2026-11-26.jsonl --out docs/images/live_testchmb_a02_solve.svg
+
 # Regenerate the 5-chamber .vmf and compile scripts
 python scripts/generate_vmf.py
 maps\compile_map.bat
@@ -123,7 +139,7 @@ python scripts/train_mock.py --backend source --host 127.0.0.1 --port 27500
 
 | Folder | Contents |
 |---|---|
-| `portal_ml/` | Python library: `schema/` (Blackboard), `bt/` (DSL & evaluator), `motor/` (primitives & MLPs), `planner/` (Layer-4 memory, schema & LLM client), `sim/` (3D mock env & chamber specs), `evolution/` (GP trainer), `bridge/` (TCP IPC client), `vmf/` (`.vmf`/`.bsp` tools) |
+| `portal_ml/` | Python library: `schema/` (Blackboard & LocalSensors), `bt/` (DSL & evaluator), `motor/` (primitives, MLPs & parkour benchmarks), `planner/` (Layer-4 memory, schema & LLM client), `viz/` (zero-dependency SVG path visualizer), `sim/` (3D mock env & chamber specs), `evolution/` (GP & motor trainers), `bridge/` (TCP IPC client), `vmf/` (`.vmf`/`.bsp` tools) |
 | `source_plugin/` | 32-bit C++17 Source Engine server plugin (`ISERVERPLUGINCALLBACKS003`) |
 | `maps/` | Generated `portal_ml_5chambers.vmf` and `vbsp`/`vvis`/`vrad` compile scripts |
 | `scripts/` | CLI entry points: training, ablation, benchmarking, VMF generation, Portal launcher, live smoke test |

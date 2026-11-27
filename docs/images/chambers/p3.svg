@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="460" viewBox="0 0 760 460">
+<defs><pattern id="pitHatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" fill="#05080f"/><line x1="0" y1="0" x2="0" y2="8" stroke="#172033" stroke-width="2"/></pattern><pattern id="acidHatch" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><rect width="10" height="10" fill="#2c4410"/><line x1="0" y1="0" x2="0" y2="10" stroke="#4d7c0f" stroke-width="2.5"/></pattern><filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+<rect width="760" height="460" fill="#070b12"/>
+<rect x="12.0" y="12.0" width="736.0" height="436.0" rx="10" fill="#0d1421" stroke="#1e2d47" stroke-width="1.2"/>
+<text x="26.0" y="35.0" fill="#f1f5f9" font-family="Segoe UI, Inter, system-ui, sans-serif" font-size="13.5" font-weight="700">P3: Gap Jump &amp; Timed Vault</text>
+<text x="26.0" y="51.0" fill="#94a3b8" font-family="Segoe UI, Inter, system-ui, sans-serif" font-size="10.5">72u pit jump + timed pedestal + acid jump | BT + NeuralParkour</text>
+<rect x="36.0" y="121.3" width="688.0" height="229.3" fill="#05080f" stroke="#33486b" stroke-width="1.4"/>
+<line x1="36.0" y1="121.3" x2="36.0" y2="350.7" stroke="#162238" stroke-width="0.6"/>
+<line x1="93.3" y1="121.3" x2="93.3" y2="350.7" stroke="#162238" stroke-width="0.6"/>
+<line x1="150.7" y1="121.3" x2="150.7" y2="350.7" stroke="#162238" stroke-width="0.6"/>
+<line x1="208.0" y1="121.3" x2="208.0" y2="350.7" stroke="#162238" stroke-width="0.6"/>
+<line x1="265.3" y1="121.3" x2="265.3" y2="350.7" stroke="#162238" stroke-width="0.6"/>
+<line x1="322.7" y1="121.3" x2="322.7" y2="350.7" stroke="#162238" stroke-width="0.6"/>
+<line x1="380.0" y1="121.3" x2="380.0" y2="350.7" stroke="#162238" stroke-width="0.6"/>
+<line x1="437.3" y1="121.3" x2="437.3" y2="350.7" stroke="#162238" stroke-width="0.6"/>
+<line x1="494.7" y1="121.3" x2="494.7" y2="350.7" stroke="#162238" stroke-width="0.6"/>
+<line x1="552.0" y1="121.3" x2="552.0" y2="350.7" stroke="#162238" stroke-width="0.6"/>
+<line x1="609.3" y1="121.3" x2="609.3" y2="350.7" stroke="#162238" stroke-width="0.6"/>
+<line x1="666.7" y1="121.3" x2="666.7" y2="350.7" stroke="#162238" stroke-width="0.6"/>
+<line x1="36.0" y1="350.7" x2="724.0" y2="350.7" stroke="#162238" stroke-width="0.6"/>
+<line x1="36.0" y1="293.3" x2="724.0" y2="293.3" stroke="#162238" stroke-width="0.6"/>
+<line x1="36.0" y1="236.0" x2="724.0" y2="236.0" stroke="#162238" stroke-width="0.6"/>
+<line x1="36.0" y1="178.7" x2="724.0" y2="178.7" stroke="#162238" stroke-width="0.6"/>
+<rect x="236.7" y="121.3" width="64.5" height="229.3" fill="url(#pitHatch)" stroke="#1e293b" stroke-width="0.9"/>
+<text x="268.9" y="239.0" text-anchor="middle" fill="#475569" font-family="Consolas, monospace" font-size="8.5" font-weight="600">PIT</text>
+<rect x="50.3" y="135.7" width="186.3" height="200.7" fill="#141f33" stroke="#2a3c5c" stroke-width="1.0"/>
+<text x="55.3" y="146.7" fill="#475569" font-family="Consolas, monospace" font-size="8.5">Z0</text>
+<rect x="301.2" y="135.7" width="408.5" height="200.7" fill="#141f33" stroke="#2a3c5c" stroke-width="1.0"/>
+<text x="306.2" y="146.7" fill="#475569" font-family="Consolas, monospace" font-size="8.5">Z1</text>
+<rect x="498.2" y="121.3" width="64.5" height="229.3" fill="url(#acidHatch)" stroke="#84cc16" stroke-width="1.4" stroke-dasharray="4,2"/>
+<text x="530.5" y="239.0" text-anchor="middle" fill="#bef264" font-family="Consolas, monospace" font-size="8.5" font-weight="700">ACID</text>
+<polygon points="415.8,229.5 422.3,236.0 415.8,242.5 409.3,236.0" fill="#451a03" stroke="#f59e0b" stroke-width="1.6"/>
+<text x="415.8" y="238.8" text-anchor="middle" fill="#fde68a" font-family="Consolas, monospace" font-size="7.5" font-weight="700">P</text>
+<rect x="675.0" y="230.0" width="12" height="12" rx="2.5" fill="#064e3b" stroke="#10b981" stroke-width="1.8"/>
+<text x="681.0" y="239.0" text-anchor="middle" fill="#a7f3d0" font-family="Consolas, monospace" font-size="8" font-weight="700">E</text>
+<circle cx="93.3" cy="236.0" r="5.5" fill="#0f172a" stroke="#a855f7" stroke-width="1.8"/>
+<text x="93.3" y="238.8" text-anchor="middle" fill="#e9d5ff" font-family="Consolas, monospace" font-size="7.5" font-weight="700">S</text>
+<polyline points="93.3,236.0 114.4,240.2 135.9,241.5 157.4,242.1 178.9,242.1 200.4,241.6 221.8,240.6 236.7,239.2 236.7,237.7 236.7,236.5 236.7,235.4 236.7,234.4 236.7,233.5 236.7,232.8 236.7,232.1 236.7,231.5 236.7,231.0 236.7,230.5 236.7,230.1 236.7,229.7 236.7,229.4 236.7,229.2 236.7,228.9 236.7,228.7 236.7,228.5 236.7,228.3 236.7,228.2 236.7,228.1 236.7,228.0 236.7,227.9 236.7,227.8 236.7,227.7 236.7,227.6 236.7,227.6 236.7,227.5 236.7,227.5 236.7,227.4 236.7,227.4 236.7,227.4 236.7,227.3 236.7,227.3 236.7,227.3 236.7,227.3 236.7,227.2 236.7,227.2 236.7,227.2 236.7,227.2 236.7,227.2 236.7,227.2 236.7,227.2 236.7,227.2 236.7,227.2 236.7,227.2 236.7,227.2 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1 236.7,227.1" fill="none" stroke="#f43f5e" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" opacity="0.72" stroke-dasharray="5,3.5"/>
+<path d="M 233.2 223.6 L 240.2 230.6 M 240.2 223.6 L 233.2 230.6" stroke="#f43f5e" stroke-width="2.0" stroke-linecap="round"/>
+<polyline points="93.3,236.0 113.0,227.3 134.1,223.3 155.4,220.3 176.9,219.0 198.3,217.8 219.7,219.8 241.2,220.6 262.0,226.1 283.3,223.3 304.1,228.7 325.0,223.4 346.2,226.5 367.4,222.5 387.4,230.2 408.7,226.8 408.7,226.8 429.7,231.1 449.8,223.5 471.3,223.7 492.8,223.1 513.6,228.6 535.1,228.3 555.4,235.4 576.9,234.8 598.3,236.7 619.4,232.5 640.9,232.2 662.1,228.6" fill="none" stroke="#34d399" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" opacity="0.96"/>
+<polygon points="283.3,223.3 279.3,226.3 278.7,221.5" fill="#34d399" opacity="0.92"/>
+<polygon points="449.8,223.5 446.6,227.3 444.9,222.8" fill="#34d399" opacity="0.92"/>
+<polygon points="640.9,232.2 636.5,234.7 636.5,229.9" fill="#34d399" opacity="0.92"/>
+<circle cx="113.0" cy="227.3" r="4.2" fill="none" stroke="#a7f3d0" stroke-width="1.2" opacity="0.85"/>
+<circle cx="134.1" cy="223.3" r="5.4" fill="none" stroke="#a7f3d0" stroke-width="1.2" opacity="0.85"/>
+<circle cx="155.4" cy="220.3" r="6.2" fill="none" stroke="#a7f3d0" stroke-width="1.2" opacity="0.85"/>
+<circle cx="176.9" cy="219.0" r="6.4" fill="none" stroke="#a7f3d0" stroke-width="1.2" opacity="0.85"/>
+<circle cx="198.3" cy="217.8" r="6.2" fill="none" stroke="#a7f3d0" stroke-width="1.2" opacity="0.85"/>
+<circle cx="219.7" cy="219.8" r="5.4" fill="none" stroke="#a7f3d0" stroke-width="1.2" opacity="0.85"/>
+<circle cx="241.2" cy="220.6" r="4.2" fill="none" stroke="#a7f3d0" stroke-width="1.2" opacity="0.85"/>
+<circle cx="325.0" cy="223.4" r="4.2" fill="none" stroke="#a7f3d0" stroke-width="1.2" opacity="0.85"/>
+<circle cx="346.2" cy="226.5" r="5.4" fill="none" stroke="#a7f3d0" stroke-width="1.2" opacity="0.85"/>
+<circle cx="367.4" cy="222.5" r="6.2" fill="none" stroke="#a7f3d0" stroke-width="1.2" opacity="0.85"/>
+<circle cx="387.4" cy="230.2" r="6.4" fill="none" stroke="#a7f3d0" stroke-width="1.2" opacity="0.85"/>
+<circle cx="408.7" cy="226.8" r="6.2" fill="none" stroke="#a7f3d0" stroke-width="1.2" opacity="0.85"/>
+<circle cx="408.7" cy="226.8" r="5.4" fill="none" stroke="#a7f3d0" stroke-width="1.2" opacity="0.85"/>
+<circle cx="429.7" cy="231.1" r="4.2" fill="none" stroke="#a7f3d0" stroke-width="1.2" opacity="0.85"/>
+<circle cx="471.3" cy="223.7" r="4.2" fill="none" stroke="#a7f3d0" stroke-width="1.2" opacity="0.85"/>
+<circle cx="492.8" cy="223.1" r="5.4" fill="none" stroke="#a7f3d0" stroke-width="1.2" opacity="0.85"/>
+<circle cx="513.6" cy="228.6" r="6.2" fill="none" stroke="#a7f3d0" stroke-width="1.2" opacity="0.85"/>
+<circle cx="535.1" cy="228.3" r="6.4" fill="none" stroke="#a7f3d0" stroke-width="1.2" opacity="0.85"/>
+<circle cx="555.4" cy="235.4" r="6.2" fill="none" stroke="#a7f3d0" stroke-width="1.2" opacity="0.85"/>
+<circle cx="576.9" cy="234.8" r="5.4" fill="none" stroke="#a7f3d0" stroke-width="1.2" opacity="0.85"/>
+<circle cx="598.3" cy="236.7" r="4.2" fill="none" stroke="#a7f3d0" stroke-width="1.2" opacity="0.85"/>
+<circle cx="640.9" cy="232.2" r="4.2" fill="none" stroke="#a7f3d0" stroke-width="1.2" opacity="0.85"/>
+<circle cx="662.1" cy="228.6" r="5.4" fill="none" stroke="#a7f3d0" stroke-width="1.2" opacity="0.85"/>
+<circle cx="662.1" cy="228.6" r="3.6" fill="#34d399" stroke="#0f172a" stroke-width="1.2"/>
+<line x1="26.0" y1="430.5" x2="40.0" y2="430.5" stroke="#f43f5e" stroke-width="2.5" stroke-dasharray="4,2"/>
+<text x="44.0" y="434.0" fill="#94a3b8" font-family="Consolas, monospace" font-size="9.5">Blind 83w: FAIL (200st)</text>
+<line x1="201.0" y1="430.5" x2="215.0" y2="430.5" stroke="#34d399" stroke-width="2.5"/>
+<text x="219.0" y="434.0" fill="#f1f5f9" font-family="Consolas, monospace" font-size="9.5">Parkour 208w: PASS (28st)</text>
+</svg>

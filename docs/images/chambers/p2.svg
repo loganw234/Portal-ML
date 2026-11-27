@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="460" viewBox="0 0 760 460">
+<defs><pattern id="pitHatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" fill="#05080f"/><line x1="0" y1="0" x2="0" y2="8" stroke="#172033" stroke-width="2"/></pattern><pattern id="acidHatch" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><rect width="10" height="10" fill="#2c4410"/><line x1="0" y1="0" x2="0" y2="10" stroke="#4d7c0f" stroke-width="2.5"/></pattern><filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+<rect width="760" height="460" fill="#070b12"/>
+<rect x="12.0" y="12.0" width="736.0" height="436.0" rx="10" fill="#0d1421" stroke="#1e2d47" stroke-width="1.2"/>
+<text x="26.0" y="35.0" fill="#f1f5f9" font-family="Segoe UI, Inter, system-ui, sans-serif" font-size="13.5" font-weight="700">P2: Hurdle &amp; Acid Trench</text>
+<text x="26.0" y="51.0" fill="#94a3b8" font-family="Segoe UI, Inter, system-ui, sans-serif" font-size="10.5">28u hurdle + lethal acid trench | Timed jumping (green rings)</text>
+<rect x="36.0" y="98.4" width="688.0" height="275.2" fill="#05080f" stroke="#33486b" stroke-width="1.4"/>
+<line x1="36.0" y1="98.4" x2="36.0" y2="373.6" stroke="#162238" stroke-width="0.6"/>
+<line x1="104.8" y1="98.4" x2="104.8" y2="373.6" stroke="#162238" stroke-width="0.6"/>
+<line x1="173.6" y1="98.4" x2="173.6" y2="373.6" stroke="#162238" stroke-width="0.6"/>
+<line x1="242.4" y1="98.4" x2="242.4" y2="373.6" stroke="#162238" stroke-width="0.6"/>
+<line x1="311.2" y1="98.4" x2="311.2" y2="373.6" stroke="#162238" stroke-width="0.6"/>
+<line x1="380.0" y1="98.4" x2="380.0" y2="373.6" stroke="#162238" stroke-width="0.6"/>
+<line x1="448.8" y1="98.4" x2="448.8" y2="373.6" stroke="#162238" stroke-width="0.6"/>
+<line x1="517.6" y1="98.4" x2="517.6" y2="373.6" stroke="#162238" stroke-width="0.6"/>
+<line x1="586.4" y1="98.4" x2="586.4" y2="373.6" stroke="#162238" stroke-width="0.6"/>
+<line x1="655.2" y1="98.4" x2="655.2" y2="373.6" stroke="#162238" stroke-width="0.6"/>
+<line x1="36.0" y1="373.6" x2="724.0" y2="373.6" stroke="#162238" stroke-width="0.6"/>
+<line x1="36.0" y1="304.8" x2="724.0" y2="304.8" stroke="#162238" stroke-width="0.6"/>
+<line x1="36.0" y1="236.0" x2="724.0" y2="236.0" stroke="#162238" stroke-width="0.6"/>
+<line x1="36.0" y1="167.2" x2="724.0" y2="167.2" stroke="#162238" stroke-width="0.6"/>
+<rect x="53.2" y="115.6" width="653.6" height="240.8" fill="#141f33" stroke="#2a3c5c" stroke-width="1.0"/>
+<rect x="431.6" y="98.4" width="81.7" height="275.2" fill="url(#acidHatch)" stroke="#84cc16" stroke-width="1.4" stroke-dasharray="4,2"/>
+<text x="472.4" y="239.0" text-anchor="middle" fill="#bef264" font-family="Consolas, monospace" font-size="8.5" font-weight="700">ACID</text>
+<rect x="246.7" y="98.4" width="25.8" height="275.2" fill="#78350f" stroke="#fbbf24" stroke-width="1.3"/>
+<text x="259.6" y="239.0" text-anchor="middle" fill="#f1f5f9" font-family="Consolas, monospace" font-size="8" font-weight="700">28u</text>
+<rect x="666.4" y="230.0" width="12" height="12" rx="2.5" fill="#064e3b" stroke="#10b981" stroke-width="1.8"/>
+<text x="672.4" y="239.0" text-anchor="middle" fill="#a7f3d0" font-family="Consolas, monospace" font-size="8" font-weight="700">E</text>
+<circle cx="104.8" cy="236.0" r="5.5" fill="#0f172a" stroke="#a855f7" stroke-width="1.8"/>
+<text x="104.8" y="238.8" text-anchor="middle" fill="#e9d5ff" font-family="Consolas, monospace" font-size="7.5" font-weight="700">S</text>
+<polyline points="104.8,236.0 130.0,241.4 154.7,248.9 179.8,255.1 205.0,260.3 205.0,264.4 205.0,268.4 205.0,272.2 205.0,275.8 205.0,279.2 205.0,282.5 205.0,285.5 205.0,288.4 205.0,291.2 205.0,293.8 205.0,296.3 205.0,298.7 205.0,300.9 205.0,303.1 205.0,305.1 205.0,307.1 205.0,308.9 205.0,310.6 205.0,312.3 205.0,313.9 205.0,315.4 205.0,316.8 205.0,318.2 205.0,319.5 205.0,320.7 205.0,321.9 205.0,323.1 205.0,324.1 205.0,325.1 205.0,326.1 205.0,327.0 205.0,327.9 205.0,328.8 205.0,329.6 205.0,330.3 205.0,331.1 205.0,331.8 205.0,332.4 205.0,333.1 205.0,333.7 205.0,334.2 205.0,334.8 205.0,335.3 205.0,335.8 205.0,336.3 205.0,336.7 205.0,337.2 205.0,337.6 205.0,338.0 205.0,338.4 205.0,338.7 205.0,339.1 205.0,339.4 205.0,339.7 205.0,340.0 205.0,340.3 205.0,340.6 205.0,340.8 205.0,341.1 205.0,341.3 205.0,341.5 205.0,341.8 205.0,342.0 205.0,342.2 205.0,342.3 205.0,342.5 205.0,342.7 205.0,342.9 205.0,343.0 205.0,343.2 205.0,343.3 205.0,343.4 205.0,343.6 205.0,343.7 205.0,343.8 205.0,343.9 205.0,344.0 205.0,344.1 205.0,344.2 205.0,344.3 205.0,344.4 205.0,344.5 205.0,344.6 205.0,344.7 205.0,344.7 205.0,344.8 205.0,344.9 205.0,344.9 205.0,345.0 205.0,345.1 205.0,345.1 205.0,345.2 205.0,345.2 205.0,345.3 205.0,345.3 205.0,345.4 205.0,345.4 205.0,345.5 205.0,345.5 205.0,345.5 205.0,345.6 205.0,345.6 205.0,345.6 205.0,345.7 205.0,345.7 205.0,345.7 205.0,345.7 205.0,345.8 205.0,345.8 205.0,345.8 205.0,345.8 205.0,345.9 205.0,345.9 205.0,345.9 205.0,345.9 205.0,345.9 205.0,346.0 205.0,346.0 205.0,346.0 205.0,346.0 205.0,346.0 205.0,346.0 205.0,346.0 205.0,346.1 205.0,346.1 205.0,346.1 205.0,346.1 205.0,346.1 205.0,346.1 205.0,346.1 205.0,346.1 205.0,346.1 205.0,346.2 205.0,346.2 205.0,346.2 205.0,346.2 205.0,346.2 205.0,346.2 205.0,346.2 205.0,346.2 205.0,346.2 205.0,346.2 205.0,346.2 205.0,346.2 205.0,346.2 205.0,346.2 205.0,346.2 205.0,346.2 205.0,346.2 205.0,346.2 205.0,346.2 205.0,346.3 205.0,346.3 205.0,346.3 205.0,346.3 205.0,346.3" fill="none" stroke="#f43f5e" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" opacity="0.72" stroke-dasharray="5,3.5"/>
+<path d="M 201.5 342.8 L 208.5 349.8 M 208.5 342.8 L 201.5 349.8" stroke="#f43f5e" stroke-width="2.0" stroke-linecap="round"/>
+<polyline points="104.8,236.0 125.9,221.2 149.9,211.7 174.6,204.3 200.1,200.0 225.8,197.7 251.6,197.4 277.3,195.2 302.4,189.5 328.2,187.8 353.9,189.5 379.6,191.4 404.4,198.7 430.1,200.8 454.0,210.4 479.8,211.6 504.1,220.4 529.8,218.5 555.3,222.4 580.6,217.4 605.9,222.4 631.5,225.5 656.0,233.5" fill="none" stroke="#34d399" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" opacity="0.96"/>
+<polygon points="277.3,195.2 273.1,197.9 272.7,193.2" fill="#34d399" opacity="0.92"/>
+<polygon points="454.0,210.4 449.1,211.0 450.9,206.6" fill="#34d399" opacity="0.92"/>
+<polygon points="631.5,225.5 626.9,227.3 627.5,222.6" fill="#34d399" opacity="0.92"/>
+<circle cx="125.9" cy="221.2" r="4.2" fill="none" stroke="#a7f3d0" stroke-width="1.2" opacity="0.85"/>
+<circle cx="149.9" cy="211.7" r="5.4" fill="none" stroke="#a7f3d0" stroke-width="1.2" opacity="0.85"/>
+<circle cx="174.6" cy="204.3" r="6.2" fill="none" stroke="#a7f3d0" stroke-width="1.2" opacity="0.85"/>
+<circle cx="200.1" cy="200.0" r="6.4" fill="none" stroke="#a7f3d0" stroke-width="1.2" opacity="0.85"/>
+<circle cx="225.8" cy="197.7" r="6.2" fill="none" stroke="#a7f3d0" stroke-width="1.2" opacity="0.85"/>
+<circle cx="251.6" cy="197.4" r="5.4" fill="none" stroke="#a7f3d0" stroke-width="1.2" opacity="0.85"/>
+<circle cx="302.4" cy="189.5" r="6.5" fill="none" stroke="#a7f3d0" stroke-width="1.2" opacity="0.85"/>
+<circle cx="328.2" cy="187.8" r="6.6" fill="none" stroke="#a7f3d0" stroke-width="1.2" opacity="0.85"/>
+<circle cx="353.9" cy="189.5" r="6.6" fill="none" stroke="#a7f3d0" stroke-width="1.2" opacity="0.85"/>
+<circle cx="379.6" cy="191.4" r="6.6" fill="none" stroke="#a7f3d0" stroke-width="1.2" opacity="0.85"/>
+<circle cx="404.4" cy="198.7" r="6.6" fill="none" stroke="#a7f3d0" stroke-width="1.2" opacity="0.85"/>
+<circle cx="430.1" cy="200.8" r="6.6" fill="none" stroke="#a7f3d0" stroke-width="1.2" opacity="0.85"/>
+<circle cx="454.0" cy="210.4" r="6.5" fill="none" stroke="#a7f3d0" stroke-width="1.2" opacity="0.85"/>
+<circle cx="479.8" cy="211.6" r="4.7" fill="none" stroke="#a7f3d0" stroke-width="1.2" opacity="0.85"/>
+<circle cx="555.3" cy="222.4" r="4.2" fill="none" stroke="#a7f3d0" stroke-width="1.2" opacity="0.85"/>
+<circle cx="580.6" cy="217.4" r="5.4" fill="none" stroke="#a7f3d0" stroke-width="1.2" opacity="0.85"/>
+<circle cx="605.9" cy="222.4" r="6.2" fill="none" stroke="#a7f3d0" stroke-width="1.2" opacity="0.85"/>
+<circle cx="631.5" cy="225.5" r="6.4" fill="none" stroke="#a7f3d0" stroke-width="1.2" opacity="0.85"/>
+<circle cx="656.0" cy="233.5" r="6.2" fill="none" stroke="#a7f3d0" stroke-width="1.2" opacity="0.85"/>
+<circle cx="656.0" cy="233.5" r="3.6" fill="#34d399" stroke="#0f172a" stroke-width="1.2"/>
+<line x1="26.0" y1="430.5" x2="40.0" y2="430.5" stroke="#f43f5e" stroke-width="2.5" stroke-dasharray="4,2"/>
+<text x="44.0" y="434.0" fill="#94a3b8" font-family="Consolas, monospace" font-size="9.5">Blind 83w: FAIL (160st)</text>
+<line x1="201.0" y1="430.5" x2="215.0" y2="430.5" stroke="#34d399" stroke-width="2.5"/>
+<text x="219.0" y="434.0" fill="#f1f5f9" font-family="Consolas, monospace" font-size="9.5">Parkour 208w: PASS (22st)</text>
+</svg>

@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="460" viewBox="0 0 760 460">
+<defs><pattern id="pitHatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" fill="#05080f"/><line x1="0" y1="0" x2="0" y2="8" stroke="#172033" stroke-width="2"/></pattern><pattern id="acidHatch" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><rect width="10" height="10" fill="#2c4410"/><line x1="0" y1="0" x2="0" y2="10" stroke="#4d7c0f" stroke-width="2.5"/></pattern><filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+<rect width="760" height="460" fill="#070b12"/>
+<rect x="12.0" y="12.0" width="736.0" height="436.0" rx="10" fill="#0d1421" stroke="#1e2d47" stroke-width="1.2"/>
+<text x="26.0" y="35.0" fill="#f1f5f9" font-family="Segoe UI, Inter, system-ui, sans-serif" font-size="13.5" font-weight="700">Ch 5: Held-Out 90 deg Rotated</text>
+<text x="26.0" y="51.0" fill="#94a3b8" font-family="Segoe UI, Inter, system-ui, sans-serif" font-size="10.5">Live Portal 1 | Cube across pit, button &amp; exit at spawn</text>
+<rect x="282.8" y="74.0" width="194.4" height="324.0" fill="#05080f" stroke="#33486b" stroke-width="1.4"/>
+<line x1="282.8" y1="74.0" x2="282.8" y2="398.0" stroke="#162238" stroke-width="0.6"/>
+<line x1="315.2" y1="74.0" x2="315.2" y2="398.0" stroke="#162238" stroke-width="0.6"/>
+<line x1="347.6" y1="74.0" x2="347.6" y2="398.0" stroke="#162238" stroke-width="0.6"/>
+<line x1="380.0" y1="74.0" x2="380.0" y2="398.0" stroke="#162238" stroke-width="0.6"/>
+<line x1="412.4" y1="74.0" x2="412.4" y2="398.0" stroke="#162238" stroke-width="0.6"/>
+<line x1="444.8" y1="74.0" x2="444.8" y2="398.0" stroke="#162238" stroke-width="0.6"/>
+<line x1="282.8" y1="398.0" x2="477.2" y2="398.0" stroke="#162238" stroke-width="0.6"/>
+<line x1="282.8" y1="365.6" x2="477.2" y2="365.6" stroke="#162238" stroke-width="0.6"/>
+<line x1="282.8" y1="333.2" x2="477.2" y2="333.2" stroke="#162238" stroke-width="0.6"/>
+<line x1="282.8" y1="300.8" x2="477.2" y2="300.8" stroke="#162238" stroke-width="0.6"/>
+<line x1="282.8" y1="268.4" x2="477.2" y2="268.4" stroke="#162238" stroke-width="0.6"/>
+<line x1="282.8" y1="236.0" x2="477.2" y2="236.0" stroke="#162238" stroke-width="0.6"/>
+<line x1="282.8" y1="203.6" x2="477.2" y2="203.6" stroke="#162238" stroke-width="0.6"/>
+<line x1="282.8" y1="171.2" x2="477.2" y2="171.2" stroke="#162238" stroke-width="0.6"/>
+<line x1="282.8" y1="138.8" x2="477.2" y2="138.8" stroke="#162238" stroke-width="0.6"/>
+<line x1="282.8" y1="106.4" x2="477.2" y2="106.4" stroke="#162238" stroke-width="0.6"/>
+<rect x="282.8" y="203.6" width="194.4" height="64.8" fill="url(#pitHatch)" stroke="#1e293b" stroke-width="0.9"/>
+<text x="380.0" y="239.0" text-anchor="middle" fill="#475569" font-family="Consolas, monospace" font-size="8.5" font-weight="600">PIT</text>
+<rect x="290.9" y="276.5" width="178.2" height="113.4" fill="#141f33" stroke="#2a3c5c" stroke-width="1.0"/>
+<text x="295.9" y="287.5" fill="#475569" font-family="Consolas, monospace" font-size="8.5">Z0</text>
+<rect x="290.9" y="82.1" width="178.2" height="113.4" fill="#141f33" stroke="#2a3c5c" stroke-width="1.0"/>
+<text x="295.9" y="93.1" fill="#475569" font-family="Consolas, monospace" font-size="8.5">Z1</text>
+<line x1="282.8" y1="362.4" x2="282.8" y2="304.0" stroke="#cbd5e1" stroke-width="4.0" stroke-linecap="round"/>
+<line x1="477.2" y1="109.6" x2="477.2" y2="168.0" stroke="#cbd5e1" stroke-width="4.0" stroke-linecap="round"/>
+<rect x="375.0" y="125.7" width="10" height="10" rx="1.5" fill="#334155" stroke="#e2e8f0" stroke-width="1.5"/>
+<text x="380.0" y="133.5" text-anchor="middle" fill="#f1f5f9" font-family="Consolas, monospace" font-size="7.5" font-weight="700">C</text>
+<circle cx="436.7" cy="317.0" r="6.5" fill="#4c0519" stroke="#f43f5e" stroke-width="1.7"/>
+<text x="436.7" y="319.8" text-anchor="middle" fill="#fecdd3" font-family="Consolas, monospace" font-size="7.5" font-weight="700">B</text>
+<rect x="325.4" y="375.8" width="12" height="12" rx="2.5" fill="#064e3b" stroke="#10b981" stroke-width="1.8"/>
+<text x="331.4" y="384.8" text-anchor="middle" fill="#a7f3d0" font-family="Consolas, monospace" font-size="8" font-weight="700">E</text>
+<circle cx="380.0" cy="357.5" r="5.5" fill="#0f172a" stroke="#a855f7" stroke-width="1.8"/>
+<text x="380.0" y="360.3" text-anchor="middle" fill="#e9d5ff" font-family="Consolas, monospace" font-size="7.5" font-weight="700">S</text>
+<circle cx="283.3" cy="333.2" r="5.2" fill="#fb923c" stroke="#0f172a" stroke-width="1.2" filter="url(#softGlow)"/>
+<circle cx="476.7" cy="138.8" r="5.2" fill="#38bdf8" stroke="#0f172a" stroke-width="1.2" filter="url(#softGlow)"/>
+<circle cx="476.7" cy="138.8" r="5.2" fill="#fb923c" stroke="#0f172a" stroke-width="1.2" filter="url(#softGlow)"/>
+<circle cx="283.3" cy="333.2" r="5.2" fill="#38bdf8" stroke="#0f172a" stroke-width="1.2" filter="url(#softGlow)"/>
+<path d="M 296.5 333.6 Q 385.7 218.0 475.0 138.4" fill="none" stroke="#38bdf8" stroke-width="1.3" stroke-dasharray="3,3" opacity="0.55"/>
+<path d="M 473.9 138.5 Q 379.9 218.0 285.8 333.4" fill="none" stroke="#38bdf8" stroke-width="1.3" stroke-dasharray="3,3" opacity="0.55"/>
+<polyline points="380.0,357.5 392.7,352.4 402.2,348.6 401.5,345.6 391.1,343.0 375.6,340.6 357.4,338.5 337.7,336.7 317.3,335.1 296.5,333.6" fill="none" stroke="#38bdf8" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" opacity="0.96"/>
+<polygon points="357.4,338.5 362.0,336.6 361.5,341.4" fill="#38bdf8" opacity="0.92"/>
+<polyline points="475.0,138.4 466.8,136.7 452.4,135.1 434.8,133.7 415.5,132.3 398.2,131.3 398.1,131.2 398.1,131.2 398.1,131.2 404.4,131.8 417.7,133.1 434.8,134.7 453.8,136.6 473.9,138.5" fill="none" stroke="#38bdf8" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" opacity="0.96"/>
+<polyline points="398.1,131.2 398.1,131.2 398.1,131.2 404.4,131.8 417.7,133.1 434.8,134.7 453.8,136.6 473.9,138.5" fill="none" stroke="#38bdf8" stroke-width="5.0" stroke-linecap="round" opacity="0.22"/>
+<polygon points="453.8,136.6 449.2,138.5 449.7,133.8" fill="#38bdf8" opacity="0.92"/>
+<polyline points="285.8,333.4 308.1,334.8 331.0,334.3 353.1,332.5 374.6,329.8 395.8,326.3 411.2,323.4 417.4,322.2 428.5,319.8 416.1,333.6 420.8,331.9 416.5,333.2 408.5,336.5 386.0,348.2 356.6,364.4 331.9,378.8" fill="none" stroke="#38bdf8" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" opacity="0.96"/>
+<polyline points="285.8,333.4 308.1,334.8 331.0,334.3 353.1,332.5 374.6,329.8 395.8,326.3 411.2,323.4 417.4,322.2 428.5,319.8" fill="none" stroke="#38bdf8" stroke-width="5.0" stroke-linecap="round" opacity="0.22"/>
+<polygon points="411.2,323.4 407.4,326.6 406.5,321.9" fill="#38bdf8" opacity="0.92"/>
+<polygon points="408.5,336.5 411.7,332.6 413.5,337.1" fill="#38bdf8" opacity="0.92"/>
+<circle cx="331.9" cy="378.8" r="3.6" fill="#38bdf8" stroke="#0f172a" stroke-width="1.2"/>
+<path d="M 285.4 338.5 Q 380.8 224.3 476.2 146.1" fill="none" stroke="#f59e0b" stroke-width="1.3" stroke-dasharray="3,3" opacity="0.55"/>
+<path d="M 465.8 139.4 Q 375.5 220.8 285.2 338.2" fill="none" stroke="#f59e0b" stroke-width="1.3" stroke-dasharray="3,3" opacity="0.55"/>
+<polyline points="380.0,357.5 389.4,344.5 395.2,336.5 398.5,331.9 400.3,329.4 400.6,329.0 400.6,329.0 400.6,329.0 400.6,329.0 400.6,329.0 400.6,329.0 400.6,329.0 394.9,326.4 382.7,326.3 366.7,327.1 349.7,323.0 331.5,319.4 312.1,319.4 292.2,322.3 291.4,329.9 285.4,338.5" fill="none" stroke="#f59e0b" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" opacity="0.96"/>
+<polygon points="366.7,327.1 371.0,324.5 371.2,329.3" fill="#f59e0b" opacity="0.92"/>
+<polyline points="476.2,146.1 467.2,137.2 453.3,131.9 437.0,126.8 418.9,121.2 399.6,119.5 395.9,119.4 395.7,119.4 395.7,119.4 395.7,119.4 395.7,119.4 395.7,119.4 395.7,119.4 395.7,119.4 395.7,119.4 395.7,119.4 395.7,119.4 395.7,119.4 395.7,119.4 401.7,121.3 414.3,125.8 429.8,133.0 447.1,136.8 465.8,139.4" fill="none" stroke="#f59e0b" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" opacity="0.96"/>
+<polyline points="395.9,119.4 395.7,119.4 395.7,119.4 395.7,119.4 395.7,119.4 395.7,119.4 395.7,119.4 395.7,119.4 395.7,119.4 395.7,119.4 395.7,119.4 395.7,119.4 395.7,119.4 401.7,121.3 414.3,125.8 429.8,133.0 447.1,136.8 465.8,139.4" fill="none" stroke="#f59e0b" stroke-width="5.0" stroke-linecap="round" opacity="0.22"/>
+<polyline points="285.2,338.2 299.4,341.2 316.8,341.0 335.9,338.9 355.7,335.3 375.9,330.6 396.1,325.4 411.2,321.7 417.6,320.3 431.1,317.8 420.4,334.1 423.9,333.6 419.4,334.9 410.4,337.6 390.8,346.7 361.6,362.2 332.2,379.0" fill="none" stroke="#f59e0b" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" opacity="0.96"/>
+<polyline points="285.2,338.2 299.4,341.2 316.8,341.0 335.9,338.9 355.7,335.3 375.9,330.6 396.1,325.4 411.2,321.7 417.6,320.3 431.1,317.8" fill="none" stroke="#f59e0b" stroke-width="5.0" stroke-linecap="round" opacity="0.22"/>
+<polygon points="396.1,325.4 392.5,328.8 391.3,324.2" fill="#f59e0b" opacity="0.92"/>
+<polygon points="419.4,334.9 422.9,331.3 424.3,335.9" fill="#f59e0b" opacity="0.92"/>
+<circle cx="332.2" cy="379.0" r="3.6" fill="#f59e0b" stroke="#0f172a" stroke-width="1.2"/>
+<line x1="26.0" y1="430.5" x2="40.0" y2="430.5" stroke="#38bdf8" stroke-width="2.5"/>
+<text x="44.0" y="434.0" fill="#f1f5f9" font-family="Consolas, monospace" font-size="9.5">Phase 1 Scripted: PASS (39st)</text>
+<line x1="222.2" y1="430.5" x2="236.2" y2="430.5" stroke="#f59e0b" stroke-width="2.5"/>
+<text x="240.2" y="434.0" fill="#f1f5f9" font-family="Consolas, monospace" font-size="9.5">Phase 2B Neural: PASS (61st)</text>
+</svg>
