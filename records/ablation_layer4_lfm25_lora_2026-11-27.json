@@ -1,15 +1,15 @@
 {
-  "generated_at": "2026-11-27T13:35:28.780586+00:00",
+  "generated_at": "2026-11-27T15:31:11.683818+00:00",
   "model": "LiquidAI/LFM2.5-1.2B-Instruct+lora(r=16)",
   "bt_path": "champions/seed7_decoupled.bt",
   "results": {
     "scripted": {
       "standard_passed": 7,
       "standard_total": 7,
-      "multistage_passed": 2,
+      "multistage_passed": 3,
       "multistage_total": 3,
-      "total_planner_calls": 30,
-      "avg_planner_ms": 2133.46,
+      "total_planner_calls": 22,
+      "avg_planner_ms": 1468.46,
       "total_fallbacks": 0,
       "standard": [
         {
@@ -26,7 +26,7 @@
           "planner_triggers": {
             "episode_start": 1
           },
-          "total_planner_ms": 2012.254,
+          "total_planner_ms": 3959.144,
           "fallback_count": 0,
           "validation_warnings": 0,
           "role_switches": 1,
@@ -48,7 +48,7 @@
             "episode_start": 1,
             "exit_opened": 1
           },
-          "total_planner_ms": 4295.833,
+          "total_planner_ms": 3129.944,
           "fallback_count": 0,
           "validation_warnings": 0,
           "role_switches": 2,
@@ -89,7 +89,7 @@
             "episode_start": 1,
             "exit_opened": 1
           },
-          "total_planner_ms": 4483.586,
+          "total_planner_ms": 3824.269,
           "fallback_count": 0,
           "validation_warnings": 0,
           "role_switches": 2,
@@ -130,7 +130,7 @@
           "planner_triggers": {
             "episode_start": 1
           },
-          "total_planner_ms": 1617.635,
+          "total_planner_ms": 1635.985,
           "fallback_count": 0,
           "validation_warnings": 0,
           "role_switches": 1,
@@ -158,7 +158,7 @@
             "episode_start": 1,
             "exit_opened": 1
           },
-          "total_planner_ms": 4448.018,
+          "total_planner_ms": 2695.204,
           "fallback_count": 0,
           "validation_warnings": 0,
           "role_switches": 2,
@@ -203,7 +203,7 @@
             "episode_start": 1,
             "exit_opened": 1
           },
-          "total_planner_ms": 3779.12,
+          "total_planner_ms": 2654.24,
           "fallback_count": 0,
           "validation_warnings": 0,
           "role_switches": 2,
@@ -248,7 +248,7 @@
             "episode_start": 1,
             "exit_opened": 1
           },
-          "total_planner_ms": 3845.012,
+          "total_planner_ms": 2328.617,
           "fallback_count": 0,
           "validation_warnings": 0,
           "role_switches": 2,
@@ -296,7 +296,7 @@
             "subgoal_completed": 1,
             "exit_opened": 1
           },
-          "total_planner_ms": 6091.862,
+          "total_planner_ms": 3566.716,
           "fallback_count": 0,
           "validation_warnings": 0,
           "role_switches": 3,
@@ -351,10 +351,10 @@
             "cube_fizzled": 1,
             "exit_opened": 1
           },
-          "total_planner_ms": 6222.253,
+          "total_planner_ms": 3685.577,
           "fallback_count": 0,
           "validation_warnings": 0,
-          "role_switches": 2,
+          "role_switches": 3,
           "memory_entries": [
             {
               "tick": 20,
@@ -385,9 +385,9 @@
         {
           "chamber_id": 103,
           "chamber_name": "M3: Three-Stage Compound Vault",
-          "success": false,
-          "steps": 520,
-          "reward": 85.0,
+          "success": true,
+          "steps": 78,
+          "reward": 207.1,
           "milestones": [
             "portal_orange_placed",
             "portal_blue_placed",
@@ -395,19 +395,20 @@
             "portal_traversed",
             "cube_contact",
             "cube_grabbed",
-            "button_pressed"
+            "button_pressed",
+            "exit_reached"
           ],
           "planner_name": "hf:LiquidAI/LFM2.5-1.2B-Instruct+lora(r=16)",
-          "planner_calls": 12,
+          "planner_calls": 4,
           "planner_triggers": {
             "episode_start": 1,
-            "subgoal_completed": 1,
-            "stall_detected": 10
+            "subgoal_completed": 2,
+            "exit_opened": 1
           },
-          "total_planner_ms": 27208.174,
+          "total_planner_ms": 4826.33,
           "fallback_count": 0,
           "validation_warnings": 0,
-          "role_switches": 2,
+          "role_switches": 4,
           "memory_entries": [
             {
               "tick": 28,
@@ -418,12 +419,28 @@
               "note": "floor_button m3_floor_btn_1 activated"
             },
             {
-              "tick": 502,
-              "event": "cube_stalled",
+              "tick": 61,
+              "event": "button_activated",
               "entity_ids": [
-                "m3_cube_1"
+                "m3_floor_btn_0"
               ],
-              "note": "no progress for 45 ticks while targeting m3_cube_1"
+              "note": "floor_button m3_floor_btn_0 activated"
+            },
+            {
+              "tick": 71,
+              "event": "button_activated",
+              "entity_ids": [
+                "m3_pedestal_0"
+              ],
+              "note": "pedestal_button m3_pedestal_0 activated"
+            },
+            {
+              "tick": 71,
+              "event": "exit_opened",
+              "entity_ids": [
+                "m3_exit_0"
+              ],
+              "note": "exit door m3_exit_0 is now open"
             }
           ]
         }
@@ -432,10 +449,10 @@
     "neural_2b": {
       "standard_passed": 7,
       "standard_total": 7,
-      "multistage_passed": 2,
+      "multistage_passed": 3,
       "multistage_total": 3,
-      "total_planner_calls": 29,
-      "avg_planner_ms": 1978.33,
+      "total_planner_calls": 22,
+      "avg_planner_ms": 1209.14,
       "total_fallbacks": 0,
       "standard": [
         {
@@ -452,7 +469,7 @@
           "planner_triggers": {
             "episode_start": 1
           },
-          "total_planner_ms": 1737.033,
+          "total_planner_ms": 1038.325,
           "fallback_count": 0,
           "validation_warnings": 0,
           "role_switches": 1,
@@ -474,7 +491,7 @@
             "episode_start": 1,
             "exit_opened": 1
           },
-          "total_planner_ms": 3540.467,
+          "total_planner_ms": 2333.667,
           "fallback_count": 0,
           "validation_warnings": 0,
           "role_switches": 2,
@@ -515,7 +532,7 @@
             "episode_start": 1,
             "exit_opened": 1
           },
-          "total_planner_ms": 3909.736,
+          "total_planner_ms": 2401.526,
           "fallback_count": 0,
           "validation_warnings": 0,
           "role_switches": 2,
@@ -556,7 +573,7 @@
           "planner_triggers": {
             "episode_start": 1
           },
-          "total_planner_ms": 1760.202,
+          "total_planner_ms": 989.52,
           "fallback_count": 0,
           "validation_warnings": 0,
           "role_switches": 1,
@@ -584,7 +601,7 @@
             "episode_start": 1,
             "exit_opened": 1
           },
-          "total_planner_ms": 3534.531,
+          "total_planner_ms": 2248.132,
           "fallback_count": 0,
           "validation_warnings": 0,
           "role_switches": 2,
@@ -629,7 +646,7 @@
             "episode_start": 1,
             "exit_opened": 1
           },
-          "total_planner_ms": 3672.509,
+          "total_planner_ms": 2584.747,
           "fallback_count": 0,
           "validation_warnings": 0,
           "role_switches": 2,
@@ -674,7 +691,7 @@
             "episode_start": 1,
             "exit_opened": 1
           },
-          "total_planner_ms": 3676.292,
+          "total_planner_ms": 2257.953,
           "fallback_count": 0,
           "validation_warnings": 0,
           "role_switches": 2,
@@ -722,7 +739,7 @@
             "subgoal_completed": 1,
             "exit_opened": 1
           },
-          "total_planner_ms": 5747.143,
+          "total_planner_ms": 4153.103,
           "fallback_count": 0,
           "validation_warnings": 0,
           "role_switches": 3,
@@ -777,10 +794,10 @@
             "cube_fizzled": 1,
             "exit_opened": 1
           },
-          "total_planner_ms": 6320.404,
+          "total_planner_ms": 3788.762,
           "fallback_count": 0,
           "validation_warnings": 0,
-          "role_switches": 2,
+          "role_switches": 3,
           "memory_entries": [
             {
               "tick": 20,
@@ -811,9 +828,9 @@
         {
           "chamber_id": 103,
           "chamber_name": "M3: Three-Stage Compound Vault",
-          "success": false,
-          "steps": 520,
-          "reward": 85.0,
+          "success": true,
+          "steps": 113,
+          "reward": 205.35,
           "milestones": [
             "portal_orange_placed",
             "portal_blue_placed",
@@ -821,19 +838,20 @@
             "portal_traversed",
             "cube_contact",
             "cube_grabbed",
-            "button_pressed"
+            "button_pressed",
+            "exit_reached"
           ],
           "planner_name": "hf:LiquidAI/LFM2.5-1.2B-Instruct+lora(r=16)",
-          "planner_calls": 11,
+          "planner_calls": 4,
           "planner_triggers": {
             "episode_start": 1,
-            "subgoal_completed": 1,
-            "stall_detected": 9
+            "subgoal_completed": 2,
+            "exit_opened": 1
           },
-          "total_planner_ms": 23473.364,
+          "total_planner_ms": 4805.384,
           "fallback_count": 0,
           "validation_warnings": 0,
-          "role_switches": 2,
+          "role_switches": 4,
           "memory_entries": [
             {
               "tick": 38,
@@ -844,12 +862,28 @@
               "note": "floor_button m3_floor_btn_1 activated"
             },
             {
-              "tick": 492,
-              "event": "cube_stalled",
+              "tick": 96,
+              "event": "button_activated",
               "entity_ids": [
-                "m3_cube_1"
+                "m3_floor_btn_0"
               ],
-              "note": "no progress for 45 ticks while targeting m3_cube_1"
+              "note": "floor_button m3_floor_btn_0 activated"
+            },
+            {
+              "tick": 106,
+              "event": "button_activated",
+              "entity_ids": [
+                "m3_pedestal_0"
+              ],
+              "note": "pedestal_button m3_pedestal_0 activated"
+            },
+            {
+              "tick": 106,
+              "event": "exit_opened",
+              "entity_ids": [
+                "m3_exit_0"
+              ],
+              "note": "exit door m3_exit_0 is now open"
             }
           ]
         }

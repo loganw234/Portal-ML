@@ -103,10 +103,23 @@ Started 2026-11-26. Objective: prove a decoupled 3-layer neuroevolutionary reaso
   - Built zero-dependency ChatML dataset generator (`scripts/build_layer4_dataset.py`) producing strictly disjoint `records/layer4_distill_train.jsonl` (500 verified examples) and `records/layer4_distill_val.jsonl` (100 verified examples) over-sampling Stage-2 multi-button switching and fizzler/stall recovery with zero benchmark ID leakage.
   - Added ready-to-run CUDA LoRA fine-tuning entry point (`scripts/train_lfm25_lora.py`) targeting `LiquidAI/LFM2.5-1.2B-Instruct` (`r=16`, `bf16`, `--merge` for GGUF export back to LM Studio).
 
+### Milestone 9 — `LFM2.5-1.2B` LoRA 20/20 Sweep, Deterministic `testchmb_a_02` Drop Hardening & Live 4-Layer Campaign Solve (Done, 2026-11-27)
+- **Closed M1–M3 completely in `LiquidAI/LFM2.5-1.2B-Instruct` via iterative LoRA distillation (`16/20 -> 18/20 -> 20/20`):**
+  - Diagnosed the exact two remaining failure modes from v1/v2 traces: (1) correlated `cube_k <-> btn_k` index shortcuts in `multi_btn_stage2` and (2) missing `PREV_SUBGOAL:` lines in training digests causing Stage-3 copy bias on M3.
+  - Updated `scripts/build_layer4_dataset.py` (600 train / 120 val strictly disjoint examples with independent cube/button sampling, realistic `PREV_SUBGOAL:` state transitions, and expanded `compound_pedestal` coverage) and added `--grad-accum` to `scripts/train_lfm25_lora.py` for zero-spillover `bf16` training on RTX 5060 Ti.
+  - **LoRA v3 (`r=16`, `bf16`, 3 epochs, `eval_loss=0.0479`, `98.59%` token acc) hit a perfect `20/20`** (`records/ablation_layer4_lfm25_lora_2026-11-27.json`; standalone merged HF checkpoint in `champions/lfm25_layer4_lora/merged`): **`7/7` standard + `3/3` multi-stage** on BOTH Phase 1 scripted (`62 / 66 / 78` steps, `22` calls) and Phase 2B neural (`81 / 82 / 113` steps, `22` calls), `0` fallbacks / `0` warnings even without GBNF grammar, and **outperforming both `RuleBasedStrategicPlanner` (`94/149`) and `Phi-4-mini-instruct` (`94/149`) on M3**!
+- **Hardened live Source Engine campaign drop repeatability on unmodified Valve `testchmb_a_02` (`100%` repeatable `3/3` first-try solves):**
+  - Diagnosed the root cause of multi-run rim bounces in `portal_ml_plugin.cpp`: Valve's ceiling dropper spawns a spare `prop_physics` sharing `targetname="box"`, so co-located `point_teleport` releases blasted the two cubes apart after triggering `floor_button_trigger_box_a02`.
+  - Added post-trigger pad pinning (`DisableMotion` 3 physics ticks / `~0.045s` after `EnableMotion`, once Valve's `floor_button_trigger_box_*` fires `OnStartTouch`) in `source_plugin/src/portal_ml_plugin.cpp` and rebuilt/installed `portal_ml_plugin.dll`.
+  - Verified **3/3 consecutive fresh live launches on unmodified Valve `testchmb_a_02` PASS identically** on the first drop (**`149` steps** — nearly 2× faster than Milestone 5's 286-step trace — `16.6s`, `reward=172.55`, `final_pos=[846.2, 192.5, 18.6]`).
+- **First-ever live 4-layer (`Phi-4-mini @ 4k`) solve on an unmodified Valve campaign chamber (`testchmb_a_02`):**
+  - Cleared unmodified Valve `testchmb_a_02` Room 1 end-to-end live in Portal 1 with live `phi-4-mini-instruct @ 4k` (LM Studio) + frozen `seed7_decoupled.bt` in **`149` steps (`16.88s`, `reward=172.55`, `2` live LLM calls / `1.58s`)** (`records/live_testchmb_a02_4layer_phi4mini_2026-11-27.jsonl`; refreshed `docs/images/live_testchmb_a02_solve.svg`).
+  - Re-verified **zero regression on live `portal_ml_5chambers`**: **7/7 PASS** (`13/59/21/21/70/60/87` steps) with Multi-Skill Auto MLPs (`83w+208w+44w`).
+
 ---
 
 ## Upcoming Milestones (Worked One at a Time)
 
-### Milestone 9 — `LFM2.5-1.2B` LoRA Execution, Native `+use` Carry/Drop & Multi-Room Campaign Maps
-- Execute `scripts/train_lfm25_lora.py` in a CUDA PyTorch environment, export GGUF to LM Studio, and ablate fine-tuned `LFM2.5-1.2B` against `Phi-4-mini @ 4k` (`16/20 -> 20/20` target at 1.25 GB / ~330 ms).
-- Replace `point_teleport` cube drops with native `+use` / `CPlayerPickupController` carry-and-drop in `source_plugin/src/motor_controller.cpp` and run live 4-layer sweeps on multi-room Valve maps (`testchmb_a_02` Rooms 1–2, `testchmb_a_05`).
+### Milestone 10 — GGUF Export of Tuned `LFM2.5-1.2B` to LM Studio & Multi-Room Campaign Progression
+- Quantize `champions/lfm25_layer4_lora/merged` to GGUF (`Q8_0` / `Q4_K_M`) for LM Studio and run the first live Portal 1 4-layer sweep (`portal_ml_5chambers` 7/7 + `testchmb_a_02`) powered by our fine-tuned `LFM2.5-1.2B` student at ~330 ms/call and 1.25 GB VRAM.
+- Extend generic campaign `ExtractGeneric` room-band progression across multi-room Valve maps (`testchmb_a_02` Rooms 1–2 via the middle elevator, `testchmb_a_05`, and `testchmb_a_06` energy-pellet / hazard rooms).

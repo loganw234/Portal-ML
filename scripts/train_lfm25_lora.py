@@ -177,6 +177,7 @@ def main() -> int:
     parser.add_argument("--gpu", default="1", help="Physical CUDA GPU index (1 = RTX 5060 Ti 16GB, 0 = RTX 4070 12GB)")
     parser.add_argument("--epochs", type=int, default=3)
     parser.add_argument("--batch-size", type=int, default=4)
+    parser.add_argument("--grad-accum", type=int, default=4)
     parser.add_argument("--lr", type=float, default=2e-4)
     parser.add_argument("--lora-r", type=int, default=16)
     parser.add_argument("--merge", action="store_true", help="Merge LoRA weights into standalone HF model")
@@ -249,7 +250,7 @@ def main() -> int:
         output_dir=str(out_dir),
         num_train_epochs=args.epochs,
         per_device_train_batch_size=args.batch_size,
-        gradient_accumulation_steps=4,
+        gradient_accumulation_steps=args.grad_accum,
         learning_rate=args.lr,
         bf16=(dtype == torch.bfloat16),
         fp16=(dtype == torch.float16),

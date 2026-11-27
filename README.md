@@ -10,9 +10,9 @@ Generated directly from recorded live Portal 1 and simulator traces via `python 
 
 ![Portal-ML Combined Path Comparisons Across All 4 Layers](docs/images/portal_ml_paths_combined.svg)
 
-**Unmodified Valve Campaign Chamber (`testchmb_a_02` Room 1 / Test Chamber 04) — Live Portal 1 Zero-Shot Solve:**
+**Unmodified Valve Campaign Chamber (`testchmb_a_02` Room 1 / Test Chamber 04) — Live 4-Layer (`Phi-4-mini @ 4k`) Zero-Shot Solve (149 steps):**
 
-![Live Portal 1 Zero-Shot Solve on Unmodified Valve testchmb_a_02](docs/images/live_testchmb_a02_solve.svg)
+![Live Portal 1 4-Layer Zero-Shot Solve on Unmodified Valve testchmb_a_02](docs/images/live_testchmb_a02_solve.svg)
 
 ## Status (2026-11-27)
 
@@ -74,9 +74,13 @@ Generated directly from recorded live Portal 1 and simulator traces via `python 
 - **Multi-skill neural routing, first full 4-layer live Portal 1 sweep, and `LFM2.5-1.2B` distillation corpus (Milestone 8, 2026-11-27).**
   - Upgraded C++ `step_clearance` to ignore movable `prop_physics` cubes and upgraded `HybridMotorController` with automatic sensor-driven `skill_mode` routing (`precision 83w` <-> `parkour 208w` + `aim 44w`): **13/13 mock sweep** (`7/7` standard + `3/3` multi-stage L4 + `3/3` parkour P1–P3).
   - **First-ever full 4-layer live Portal 1 sweep (`records/live_7ch_4layer_phi4mini_2026-11-27.jsonl`):** running live C++ `IEngineTrace` Blackboard + live **`phi-4-mini-instruct @ 4k`** (LM Studio) + frozen 24-node `seed7_decoupled.bt` + Multi-Skill Auto neural MLPs (`83w+208w+44w`) cleared **7/7 chambers live in Portal 1** (`13/59/21/21/70/60/87` steps; **13 total LLM calls**, 6.43s total LLM time, `0` fallbacks, `0` warnings).
-  - Built zero-dependency ChatML distillation corpus generator (`scripts/build_layer4_dataset.py` -> `records/layer4_distill_train.jsonl` 500 examples / `val.jsonl` 100 examples, strictly disjoint from all test chambers), set up `.venv` (`torch 2.11.0+cu128` + `requirements-lora.txt`), and **verified `LFM2.5-1.2B` LoRA fine-tuning (`r=16`, `bf16`, 3 epochs, `eval_loss=0.0467`, `98.63%` token acc)** on RTX 5060 Ti (`records/ablation_layer4_lfm25_lora_2026-11-27.json`): lifted `LFM2.5-1.2B` from **`16/20` zero-shot -> `18/20`** (`7/7` standard + **`M1` PASS `62/81` steps / 3 calls + `M2` PASS `66/82` steps / 3 calls**, `0` fallbacks even without GBNF grammar).
+  - Built zero-dependency ChatML distillation corpus generator (`scripts/build_layer4_dataset.py` -> strictly disjoint synthetic train/val JSONL) and CUDA LoRA fine-tuning pipeline (`scripts/train_lfm25_lora.py`, `.venv` + `requirements-lora.txt`).
+- **`LFM2.5-1.2B` LoRA 20/20 sweep, deterministic `testchmb_a_02` drops & first live 4-layer Valve campaign solve (Milestone 9, 2026-11-27).**
+  - **Fine-tuned `LiquidAI/LFM2.5-1.2B-Instruct` LoRA (`r=16`, `bf16`, 3 epochs, 600 train / 120 val strictly disjoint examples with de-correlated indices & `PREV_SUBGOAL` transitions, `eval_loss=0.0479`, `98.59%` token acc)** on RTX 5060 Ti (`records/ablation_layer4_lfm25_lora_2026-11-27.json`): jumped from **`16/20` zero-shot -> `18/20` (v1/v2) -> `20/20` PASS** (`7/7` standard + **`3/3` M1–M3** on BOTH Phase 1 scripted `62/66/78` steps and Phase 2B neural `81/82/113` steps), hitting the theoretical minimum **`22` calls** with `0` fallbacks even without GBNF grammar — **beating both `RuleBasedStrategicPlanner` (`94/149`) and `Phi-4-mini-instruct` (`94/149`) on M3**!
+  - Hardened live Source Engine campaign drop physics (`source_plugin/src/portal_ml_plugin.cpp`) against duplicate-`targetname="box"` dropper cube interpenetration: **3/3 consecutive fresh live trials on unmodified Valve `testchmb_a_02` PASSED identically in `149` steps** (`16.6s`, `reward=172.55`, zero drop retries — nearly 2× faster than Milestone 5's 286-step trace).
+  - **First-ever live 4-layer (`Phi-4-mini @ 4k`) solve on an unmodified Valve campaign chamber (`records/live_testchmb_a02_4layer_phi4mini_2026-11-27.jsonl`):** cleared `testchmb_a_02` Room 1 in **`149` steps (`16.88s`, `2` live LLM calls / `1.58s`)**, with **7/7 PASS** live regression on `portal_ml_5chambers` (`13/59/21/21/70/60/87` steps).
 
-What comes next is tracked in [docs/ROADMAP.md](docs/ROADMAP.md), [docs/REAL_GAME_ANALYSIS.md](docs/REAL_GAME_ANALYSIS.md), and [docs/FOUR_LAYER_ARCHITECTURE.md](docs/FOUR_LAYER_ARCHITECTURE.md): executing `LFM2.5-1.2B` LoRA training, native `+use` cube carry/drop, and multi-room live campaign runs (Milestone 9).
+What comes next is tracked in [docs/ROADMAP.md](docs/ROADMAP.md), [docs/REAL_GAME_ANALYSIS.md](docs/REAL_GAME_ANALYSIS.md), and [docs/FOUR_LAYER_ARCHITECTURE.md](docs/FOUR_LAYER_ARCHITECTURE.md): GGUF export of our 20/20 `LFM2.5-1.2B` student to LM Studio for live 1.25 GB Portal 1 runs and multi-room campaign progression (Milestone 10).
 
 ## The front door
 

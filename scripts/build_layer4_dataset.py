@@ -21,6 +21,7 @@ from portal_ml.planner import (
     SYSTEM_PROMPT,
     EpisodicMemory,
     RuleBasedStrategicPlanner,
+    StrategicDirective,
     TriggerEvent,
     build_symbolic_digest,
     compile_semantic_action,
@@ -51,7 +52,7 @@ def _build_synthetic_case(rng: random.Random, idx: int) -> dict[str, Any]:
             "compound_pedestal",
             "open_exit",
         ],
-        weights=[20, 30, 20, 10, 12, 8],
+        weights=[16, 28, 18, 10, 20, 8],
         k=1,
     )[0]
 
@@ -64,6 +65,7 @@ def _build_synthetic_case(rng: random.Random, idx: int) -> dict[str, Any]:
     entities: list[EntityState] = []
     mem = EpisodicMemory(max_entries=8)
     trigger = TriggerEvent.EPISODE_START
+    prev_directive: StrategicDirective | None = None
     exit_id = f"{ep}_{idx % 9}"
 
     def rpos() -> Vec3:
@@ -78,6 +80,8 @@ def _build_synthetic_case(rng: random.Random, idx: int) -> dict[str, Any]:
             entities.append(EntityState(id=f"{bp}_{k}", kind=EntityKind.FLOOR_BUTTON, pos=pos, zone_id=z, active=True))
         entities.append(EntityState(id=exit_id, kind=EntityKind.EXIT_DOOR, pos=rpos(), zone_id=0, active=True))
         trigger = TriggerEvent.EXIT_OPENED
+        if n_btns > 0:
+            prev_directive = StrategicDirective(subgoal=f"place {cp}_{n_btns - 1} on {bp}_{n_btns - 1}")
         mem.record(rng.randint(10, 80), "exit_opened", (exit_id,), f"exit door {exit_id} is now open")
 
     elif scenario == "multi_btn_stage1":
@@ -93,19 +97,37 @@ def _build_synthetic_case(rng: random.Random, idx: int) -> dict[str, Any]:
     elif scenario == "multi_btn_stage2":
         n_pairs = rng.randint(2, 3)
         n_done = rng.randint(1, n_pairs - 1)
-        done_indices = set(rng.sample(range(n_pairs), n_done))
-        for k in range(n_pairs):
-            is_done = k in done_indices
-            z = rng.randrange(n_zones)
+        # Independently sample active cubes and pressed buttons so the model CANNOT
+        # learn a spurious index shortcut (e.g. cube_0 -> btn_0, cube_1 -> btn_1).
+        done_cube_indices = set(rng.sample(range(n_pairs), n_done))
+        done_btn_indices = set(rng.sample(range(n_pairs), n_done))
+        done_pairs = list(zip(sorted(done_cube_indices), sorted(done_btn_indices)))
+        pair_pos: dict[int, tuple[Vec3, int]] = {}
+        for ck, bk in done_pairs:
             pos = rpos()
-            entities.append(EntityState(id=f"{cp}_{k}", kind=EntityKind.CUBE, pos=pos, zone_id=z, active=is_done))
-            entities.append(EntityState(id=f"{bp}_{k}", kind=EntityKind.FLOOR_BUTTON, pos=pos if is_done else rpos(), zone_id=z, active=is_done))
-            if is_done:
+            z = rng.randrange(n_zones)
+            pair_pos[ck] = (pos, z)
+            pair_pos[100 + bk] = (pos, z)
+
+        for k in range(n_pairs):
+            if k in done_cube_indices:
+                pos, z = pair_pos[k]
+                entities.append(EntityState(id=f"{cp}_{k}", kind=EntityKind.CUBE, pos=pos, zone_id=z, active=True))
+            else:
+                entities.append(EntityState(id=f"{cp}_{k}", kind=EntityKind.CUBE, pos=rpos(), zone_id=rng.randrange(n_zones), active=False))
+        for k in range(n_pairs):
+            if k in done_btn_indices:
+                pos, z = pair_pos[100 + k]
+                entities.append(EntityState(id=f"{bp}_{k}", kind=EntityKind.FLOOR_BUTTON, pos=pos, zone_id=z, active=True))
                 mem.record(rng.randint(12, 70), "button_activated", (f"{bp}_{k}",), f"floor_button {bp}_{k} activated")
-        if rng.random() < 0.5:
+            else:
+                entities.append(EntityState(id=f"{bp}_{k}", kind=EntityKind.FLOOR_BUTTON, pos=rpos(), zone_id=rng.randrange(n_zones), active=False))
+        if rng.random() < 0.6:
             entities.append(EntityState(id=f"{pp}_0", kind=EntityKind.PEDESTAL_BUTTON, pos=rpos(), zone_id=0, active=False))
         entities.append(EntityState(id=exit_id, kind=EntityKind.EXIT_DOOR, pos=rpos(), zone_id=0, active=False))
         trigger = TriggerEvent.SUBGOAL_COMPLETED
+        last_ck, last_bk = done_pairs[-1]
+        prev_directive = StrategicDirective(subgoal=f"place {cp}_{last_ck} on {bp}_{last_bk}")
 
     elif scenario in ("fizzler_recovery", "stall_recovery"):
         n_cubes = rng.randint(2, 3)
@@ -115,6 +137,7 @@ def _build_synthetic_case(rng: random.Random, idx: int) -> dict[str, Any]:
         entities.append(EntityState(id=f"{bp}_0", kind=EntityKind.FLOOR_BUTTON, pos=rpos(), zone_id=0, active=False))
         entities.append(EntityState(id=exit_id, kind=EntityKind.EXIT_DOOR, pos=rpos(), zone_id=0, active=False))
         bad_id = f"{cp}_{bad_idx}"
+        prev_directive = StrategicDirective(subgoal=f"place {bad_id} on {bp}_0")
         if scenario == "fizzler_recovery":
             trigger = TriggerEvent.CUBE_FIZZLED
             mem.record(rng.randint(10, 40), "cube_fizzled", (bad_id,), f"cube {bad_id} vaporized by fizzler; avoid reusing this cube")
@@ -123,16 +146,29 @@ def _build_synthetic_case(rng: random.Random, idx: int) -> dict[str, Any]:
             mem.record(rng.randint(45, 90), "cube_stalled", (bad_id,), f"no progress while targeting {bad_id}")
 
     else:  # compound_pedestal (all floor buttons already pressed -> press pedestal)
-        n_pairs = rng.randint(0, 2)
+        n_pairs = 0 if rng.random() < 0.15 else rng.randint(1, 3)
+        perm_btns = list(range(n_pairs))
+        rng.shuffle(perm_btns)
         for k in range(n_pairs):
+            bk = perm_btns[k]
             z = rng.randrange(n_zones)
             pos = rpos()
             entities.append(EntityState(id=f"{cp}_{k}", kind=EntityKind.CUBE, pos=pos, zone_id=z, active=True))
-            entities.append(EntityState(id=f"{bp}_{k}", kind=EntityKind.FLOOR_BUTTON, pos=pos, zone_id=z, active=True))
-            mem.record(rng.randint(15, 80), "button_activated", (f"{bp}_{k}",), f"floor_button {bp}_{k} activated")
+            entities.append(EntityState(id=f"{bp}_{bk}", kind=EntityKind.FLOOR_BUTTON, pos=pos, zone_id=z, active=True))
+            mem.record(rng.randint(15, 80), "button_activated", (f"{bp}_{bk}",), f"floor_button {bp}_{bk} activated")
         entities.append(EntityState(id=f"{pp}_0", kind=EntityKind.PEDESTAL_BUTTON, pos=rpos(), zone_id=0, active=False))
         entities.append(EntityState(id=exit_id, kind=EntityKind.EXIT_DOOR, pos=rpos(), zone_id=0, active=False))
-        trigger = TriggerEvent.SUBGOAL_COMPLETED if n_pairs > 0 else TriggerEvent.EPISODE_START
+        if n_pairs > 0:
+            last_ck = n_pairs - 1
+            last_bk = perm_btns[-1]
+            prev_directive = StrategicDirective(subgoal=f"place {cp}_{last_ck} on {bp}_{last_bk}")
+            if rng.random() < 0.25:
+                trigger = TriggerEvent.STALL_DETECTED
+                mem.record(rng.randint(85, 130), "cube_stalled", (f"{cp}_{last_ck}",), f"no progress for 45 ticks while targeting {cp}_{last_ck}")
+            else:
+                trigger = TriggerEvent.SUBGOAL_COMPLETED
+        else:
+            trigger = TriggerEvent.EPISODE_START
 
     walls = [
         PortalWall(id=f"wall_z{z}", pos=Vec3(128.0 + z * 320.0, 0.0, 64.0), normal=Vec3(0.0, 1.0, 0.0), zone_id=z)
@@ -189,7 +225,7 @@ def _build_synthetic_case(rng: random.Random, idx: int) -> dict[str, Any]:
     _, warnings = compiled.validate_against_snapshot(snap)
     assert not warnings, f"Synthetic dataset validation warnings: {warnings}"
 
-    digest = build_symbolic_digest(snap, mem, trigger)
+    digest = build_symbolic_digest(snap, mem, trigger, prev_directive)
     return {
         "scenario": scenario,
         "messages": [

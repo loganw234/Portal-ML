@@ -192,8 +192,7 @@ void PortalMLPlugin::GameFrame(bool simulating) {
             if (extractor_.IsGenericMode() && pending_subticks_ == 20) {
                 // Step 1 (after ~0.51s off button so Valve's player-trigger finishes
                 // OnEndTouchAll + floor_button_door_* finishes rising): configure
-                // point_teleport 28u above tgt_z and wake VPhysics while STILL solid=0
-                // so spare dropper cubes sharing targetname never collide/detonate.
+                // point_teleport 28u above tgt_z and wake VPhysics while STILL solid=0.
                 std::ostringstream ss;
                 ss << "ent_fire point_teleport AddOutput \"angles 0 0 0\"; "
                    << "ent_fire point_teleport AddOutput \"origin "
@@ -203,23 +202,27 @@ void PortalMLPlugin::GameFrame(bool simulating) {
                    << "ent_fire " << pending_drop_cube_ << " EnableMotion\n";
                 SendServerCmd(ss.str(), false);
             } else if (extractor_.IsGenericMode() && pending_subticks_ == 18) {
-                // Step 2: Teleport while STILL solid=0 (separates active cube to dead-center
-                // above button pad with zero interpenetration impulse).
+                // Step 2: Teleport while STILL solid=0 to dead-center above button pad.
                 SendServerCmd("ent_fire point_teleport Teleport\n", false);
             } else if (extractor_.IsGenericMode() && pending_subticks_ == 17) {
-                // Step 3: freeze at (-451.6, 189.4, 41.5) to zero linear/angular velocity.
+                // Step 3: freeze dead-center above the pad to zero linear/angular velocity.
                 SendServerCmd("ent_fire " + pending_drop_cube_ + " DisableMotion\n", false);
             } else if (extractor_.IsGenericMode() && pending_subticks_ == 16) {
                 // Step 4: restore SOLID_VPHYSICS on a distinct tick while DisableMotion is active.
                 SendServerCmd("ent_fire " + pending_drop_cube_ + " AddOutput \"solid 6\"\n", false);
             } else if (extractor_.IsGenericMode() && pending_subticks_ == 15) {
-                // Step 5: re-enable VPhysics + Wake on a distinct tick so gravity drops cube
-                // cleanly from rest straight onto the stationary floor button pad.
+                // Step 5: re-enable VPhysics + Wake so Valve's floor_button_trigger_box_*
+                // registers OnStartTouch and opens floor_button_door_* / exit door.
                 std::ostringstream ss;
                 ss << "ent_fire " << pending_drop_cube_ << " EnableMotion; "
-                   << "ent_fire " << pending_drop_cube_ << " Wake \"\" 0.02; "
+                   << "ent_fire " << pending_drop_cube_ << " Wake \"\" 0.01; "
                    << "ent_fire point_teleport Kill \"\" 0.04\n";
                 SendServerCmd(ss.str(), false);
+            } else if (extractor_.IsGenericMode() && pending_subticks_ == 12) {
+                // Step 6: pin cube in place on the button pad after 3 physics ticks (~0.045s)
+                // once Valve's trigger has fired, preventing duplicate dropper cubes sharing
+                // targetname ("box") from blasting each other off the button rim.
+                SendServerCmd("ent_fire " + pending_drop_cube_ + " DisableMotion\n", false);
                 extractor_.SetPlayerVelocityXY(0.0f, 0.0f, true);
                 extractor_.NotifyHoldState("");
                 pending_drop_cube_.clear();
@@ -346,9 +349,11 @@ void PortalMLPlugin::GameFrame(bool simulating) {
             }
         }
         motor_.Execute(active_cmd_, pre_state, extractor_);
-        pending_subticks_ = (active_cmd_.kind == MotorCmdKind::kDrop && extractor_.IsGenericMode())
-                                ? 54
-                                : subticks_per_step_;
+        if (active_cmd_.kind == MotorCmdKind::kDrop && extractor_.IsGenericMode()) {
+            pending_subticks_ = 54;
+        } else {
+            pending_subticks_ = subticks_per_step_;
+        }
         awaiting_post_step_ = true;
         return;
     }
