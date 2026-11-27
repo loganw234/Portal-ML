@@ -55,6 +55,18 @@ class EntitySpawn:
 
 
 @dataclass(frozen=True, slots=True)
+class FizzlerBarrier:
+    """Portal 1 trigger_portal_cleanser barrier that vaporizes carried cubes crossing it."""
+
+    id: str
+    zone_id: int
+    axis: str  # "x" (vertical plane x=coord) or "y" (plane y=coord)
+    coord: float
+    min_span: float
+    max_span: float
+
+
+@dataclass(frozen=True, slots=True)
 class ChamberSpec:
     chamber_id: int
     name: str
@@ -69,6 +81,8 @@ class ChamberSpec:
     pits: tuple[PitBox, ...] = ()
     entities: tuple[EntitySpawn, ...] = ()
     portal_walls: tuple[PortalWall, ...] = ()
+    fizzlers: tuple[FizzlerBarrier, ...] = ()
+    require_all_buttons: bool = False
     max_steps: int = 200
     exit_starts_open: bool = False
 

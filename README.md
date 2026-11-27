@@ -4,7 +4,7 @@ A hybrid neuroevolutionary reasoning agent for *Portal* (Source Engine) that dec
 
 The core claim is architectural: separating *what* subgoal entity to pursue from *how* to reach and interact with `target` lets an agent trained strictly on Chambers 1–4 generalize zero-shot to a held-out rotated puzzle (Chamber 5) that combines cubes, buttons, and portals for the first time.
 
-## Status (2026-11-26)
+## Status (2026-11-27)
 
 - **3-layer PoC and 5-chamber mock 3D simulator built and measured.** Pure Python 3.12 (zero external dependencies) runs at **1,978 episodes/sec** (**42,734 ticks/sec**) on one desktop core (`python scripts/benchmark_sim.py --episodes 5000`).
 - **Decoupled vs unconstrained ablation measured (5 seeds, pop 120, max 120 gens, trained strictly on Chambers 1–4):**
@@ -46,21 +46,30 @@ The core claim is architectural: separating *what* subgoal entity to pursue from
   - **The frozen 24-node `champions/seed7_decoupled.bt` (trained strictly on synthetic mock Chambers 1–4, zero retraining) solved Valve's unmodified `testchmb_a_02` Room 1 end-to-end live in Portal 1:** triggered Valve's box dropper, entered the sunken pit, grabbed Valve's `box`, fired the real `weapon_portalgun` to open a Blue portal linked to Valve's fixed Orange portal, carried the cube through the portal, physically depressed `button_top_a_a02` to slide `exit_door_left_a02` / `exit_door_right_a02` open, walked past the fizzler, and entered the middle elevator (`a02-middle_elevator_body`).
   - Measured live results: fastest verified solve **106 steps (11.87s, reward 174.70)**; saved verified pass trace (`records/live_testchmb_a02_solve_2026-11-26.jsonl`, **286 steps, 33.68s, reward 165.70**, all 7 milestones). Honest limitation: drop repeatability on `testchmb_a_02` within 350 steps is ~1/3–2/3 across launches because Valve's ceiling dropper spawns a spare `box` sharing `targetname="box"` and `point_teleport` VPhysics settling can roll off the circular button rim (replacing `point_teleport` with native `+use` / `CPlayerPickupController` carry-and-drop is queued for future motor hardening).
   - Verified **zero regression** on the 7-chamber custom suite (`portal_ml_5chambers`, `-textmode`): **7/7 PASS** Phase 1 scripted (`13/35/22/11/49/39/45` steps) and **7/7 PASS** Phase 2B neural `MoveTo(83w) + Aim(44w)` (`13/59/21/20/72/61/86` steps).
+- **Layer-4 event-driven strategic memory & subgoal planner built and benchmarked live with local small LLMs (Milestone 6, 2026-11-27).**
+  - Implemented `portal_ml/planner/` (zero external dependencies): rolling deduplicated `EpisodicMemory(max_entries=8)`, affordance-gated dynamic `json_schema` semantic subgoals (`place_cube_on_button`, `press_pedestal`, `go_to_exit`), `StrategicDirective` snapshot validation, `RuleBasedStrategicPlanner`, and `OpenAICompatibleLLMPlanner` (LM Studio / Ollama / `llama-server` client with `<think>...</think>` stripping and graceful fallback).
+  - Controlled 3-layer vs 4-layer ablation (`scripts/ablate_layer4.py`) underneath the **frozen** 24-node `champions/seed7_decoupled.bt` (zero retraining) across standard Chambers 1–7 and three multi-stage chambers (`M1: Dual-Button Relay`, `M2: Fizzler-Gated Decoy Cube`, `M3: Three-Stage Compound Vault`):
+    - **3-layer (`none`):** `7/7` standard + **`0/3` multi-stage** (both scripted and Phase 2B neural).
+    - **4-layer (`rule`, `records/ablation_layer4_2026-11-27.json`):** `7/7` standard + **`3/3` multi-stage** on both scripted (`69/66/94` steps) and Phase 2B neural (`87/82/149` steps; `3/3/4` calls).
+    - **4-layer live `phi-4-mini-instruct` (3.8B, 2.49 GB via LM Studio, `records/ablation_layer4_phi4mini_2026-11-27.json`):** **`7/7` standard + `3/3` multi-stage on BOTH scripted (`116/66/91` steps, 23 calls, avg 470 ms/call) and Phase 2B neural (`81/82/152` steps, 22 calls, avg 461 ms/call)** — **20/20 zero-shot PASS**, `0` fallbacks, `0` warnings.
+    - **4-layer live `liquid/lfm2.5-1.2b` (1.2B, 1.25 GB via LM Studio, `records/ablation_layer4_lfm25_2026-11-27.json`):** **`7/7` standard + `1/3` multi-stage** on both scripted (`M2` PASS 42 steps; avg 368 ms/call) and Phase 2B neural (`M2` PASS 65 steps; avg 332 ms/call, ~28% faster at half the VRAM), `0` fallbacks/warnings — exposing a clean Stage-2 switching target for Milestone 7 LoRA distillation.
+  - Wired `--planner {none,rule,llm}` into `scripts/replay_live.py` and documented full comparison & setup in [docs/FOUR_LAYER_ARCHITECTURE.md](docs/FOUR_LAYER_ARCHITECTURE.md).
 
-What comes next is tracked in [docs/ROADMAP.md](docs/ROADMAP.md), [docs/REAL_GAME_ANALYSIS.md](docs/REAL_GAME_ANALYSIS.md), and [docs/FOUR_LAYER_ARCHITECTURE.md](docs/FOUR_LAYER_ARCHITECTURE.md): Layer-4 small-LLM strategic memory & subgoal planning (Milestone 6).
+What comes next is tracked in [docs/ROADMAP.md](docs/ROADMAP.md), [docs/REAL_GAME_ANALYSIS.md](docs/REAL_GAME_ANALYSIS.md), and [docs/FOUR_LAYER_ARCHITECTURE.md](docs/FOUR_LAYER_ARCHITECTURE.md): multi-room live campaign runs (`testchmb_a_02` Rooms 1–2, `testchmb_a_05`), native `+use` cube carry-and-drop hardening, and `LFM2.5-1.2B` LoRA trace distillation (Milestone 7).
 
 ## The front door
 
     python tools/check.py
     python tools/check.py --control
 
-Runs every gate (personal-path guard, Python↔C++ chamber 1–7 coordinate parity, held-out Chambers 5–7 isolation, `.vmf` integrity, Phase-2 checkpoint schema validation, and the 24-test unit/integration suite) and ends with `VERDICT: PASS`. Use `--quick` to skip the full evolution test during fast edits.
+Runs every gate (personal-path guard, Python↔C++ chamber 1–7 coordinate parity, held-out Chambers 5–7 isolation, `.vmf` integrity, Phase-2 checkpoint schema validation, and the 33-test unit/integration suite) and ends with `VERDICT: PASS`. Use `--quick` to skip the full evolution test during fast edits.
 
 ## Architecture
 
 1. **Layer 1 — Perception -> Symbolic Blackboard** (`portal_ml/schema/blackboard.py`): Ground-truth JSON snapshot every tick in Source Hammer units (player position/velocity/yaw/zone/held object, entities, door/button states, portalable surface normals, active portal transforms).
 2. **Layer 2 — Evolved Reasoning Layer** (`portal_ml/bt/`, `portal_ml/evolution/`): Readable Behavior Tree DSL (`SELECTOR`, `SEQUENCE`, `CONDITION`, `ACTION`) evolved by structural & semantic AST mutations and subtree crossover.
-3. **Layer 3 — Motor Execution Layer** (`portal_ml/motor/primitives.py`): Deterministic Phase-1 primitives (`MoveTo`, `Grab`, `Drop`, `Press`, `ShootPortal`) plus the `MotorPolicy` protocol for Phase-2 neural controllers.
+3. **Layer 3 — Motor Execution Layer** (`portal_ml/motor/`): Deterministic Phase-1 primitives (`MoveTo`, `Grab`, `Drop`, `Press`, `ShootPortal`) plus neuroevolved Phase-2 MLPs (`MoveTo` 83w + `Aim` 44w).
+4. **Layer 4 — Event-Driven Strategic Memory & Planner** (`portal_ml/planner/`): Low-frequency (`1–4` calls/chamber) strategic focus binding (`WorkingMemory.role_overrides`) + bounded `EpisodicMemory`, pluggable across deterministic rules or local OpenAI-compatible small LLMs (`Phi-4-mini`, `LFM2.5`).
 
 ## 7-Chamber Testbed (4 Training + 3 Held-Out)
 
@@ -107,7 +116,7 @@ python scripts/train_mock.py --backend source --host 127.0.0.1 --port 27500
 
 | Folder | Contents |
 |---|---|
-| `portal_ml/` | Python library: `schema/` (Blackboard), `bt/` (DSL & evaluator), `motor/` (primitives), `sim/` (3D mock env & chamber specs), `evolution/` (GP trainer), `bridge/` (TCP IPC client), `vmf/` (`.vmf` builder) |
+| `portal_ml/` | Python library: `schema/` (Blackboard), `bt/` (DSL & evaluator), `motor/` (primitives & MLPs), `planner/` (Layer-4 memory, schema & LLM client), `sim/` (3D mock env & chamber specs), `evolution/` (GP trainer), `bridge/` (TCP IPC client), `vmf/` (`.vmf`/`.bsp` tools) |
 | `source_plugin/` | 32-bit C++17 Source Engine server plugin (`ISERVERPLUGINCALLBACKS003`) |
 | `maps/` | Generated `portal_ml_5chambers.vmf` and `vbsp`/`vvis`/`vrad` compile scripts |
 | `scripts/` | CLI entry points: training, ablation, benchmarking, VMF generation, Portal launcher, live smoke test |

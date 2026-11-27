@@ -1,0 +1,2241 @@
+{
+  "generated_at": "2026-11-27T11:39:19.972165+00:00",
+  "bt_path": "champions/seed7_decoupled.bt",
+  "bt_nodes": 24,
+  "results": {
+    "scripted": {
+      "3-layer (none)": {
+        "standard": [
+          {
+            "chamber_id": 1,
+            "chamber_name": "The Hallway",
+            "success": true,
+            "steps": 16,
+            "reward": 99.2,
+            "milestones": [
+              "exit_reached"
+            ],
+            "planner_name": "none",
+            "planner_calls": 0,
+            "planner_triggers": {},
+            "total_planner_ms": 0.0,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 0,
+            "memory_entries": []
+          },
+          {
+            "chamber_id": 2,
+            "chamber_name": "The Pedestal",
+            "success": true,
+            "steps": 18,
+            "reward": 124.1,
+            "milestones": [
+              "button_pressed",
+              "exit_reached"
+            ],
+            "planner_name": "none",
+            "planner_calls": 0,
+            "planner_triggers": {},
+            "total_planner_ms": 0.0,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 0,
+            "memory_entries": []
+          },
+          {
+            "chamber_id": 3,
+            "chamber_name": "Box on Button",
+            "success": true,
+            "steps": 27,
+            "reward": 148.65,
+            "milestones": [
+              "cube_contact",
+              "cube_grabbed",
+              "button_pressed",
+              "exit_reached"
+            ],
+            "planner_name": "none",
+            "planner_calls": 0,
+            "planner_triggers": {},
+            "total_planner_ms": 0.0,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 0,
+            "memory_entries": []
+          },
+          {
+            "chamber_id": 4,
+            "chamber_name": "The Simple Gap",
+            "success": true,
+            "steps": 10,
+            "reward": 160.5,
+            "milestones": [
+              "portal_orange_placed",
+              "portal_blue_placed",
+              "portals_bridged",
+              "portal_traversed",
+              "exit_reached"
+            ],
+            "planner_name": "none",
+            "planner_calls": 0,
+            "planner_triggers": {},
+            "total_planner_ms": 0.0,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 0,
+            "memory_entries": []
+          },
+          {
+            "chamber_id": 5,
+            "chamber_name": "Held-Out Generalization Test",
+            "success": true,
+            "steps": 45,
+            "reward": 208.75,
+            "milestones": [
+              "portal_orange_placed",
+              "portal_blue_placed",
+              "portals_bridged",
+              "portal_traversed",
+              "cube_contact",
+              "cube_grabbed",
+              "button_pressed",
+              "exit_reached"
+            ],
+            "planner_name": "none",
+            "planner_calls": 0,
+            "planner_triggers": {},
+            "total_planner_ms": 0.0,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 0,
+            "memory_entries": []
+          },
+          {
+            "chamber_id": 6,
+            "chamber_name": "Held-Out: Button Across Gap",
+            "success": true,
+            "steps": 37,
+            "reward": 209.15,
+            "milestones": [
+              "cube_contact",
+              "cube_grabbed",
+              "portal_orange_placed",
+              "portal_blue_placed",
+              "portals_bridged",
+              "portal_traversed",
+              "button_pressed",
+              "exit_reached"
+            ],
+            "planner_name": "none",
+            "planner_calls": 0,
+            "planner_triggers": {},
+            "total_planner_ms": 0.0,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 0,
+            "memory_entries": []
+          },
+          {
+            "chamber_id": 7,
+            "chamber_name": "Held-Out: Three-Zone Relay",
+            "success": true,
+            "steps": 28,
+            "reward": 209.6,
+            "milestones": [
+              "portal_orange_placed",
+              "portal_blue_placed",
+              "portals_bridged",
+              "portal_traversed",
+              "cube_contact",
+              "cube_grabbed",
+              "button_pressed",
+              "exit_reached"
+            ],
+            "planner_name": "none",
+            "planner_calls": 0,
+            "planner_triggers": {},
+            "total_planner_ms": 0.0,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 0,
+            "memory_entries": []
+          }
+        ],
+        "multistage": [
+          {
+            "chamber_id": 101,
+            "chamber_name": "M1: Dual-Button Relay",
+            "success": false,
+            "steps": 380,
+            "reward": 47.0,
+            "milestones": [
+              "cube_contact",
+              "cube_grabbed",
+              "button_pressed",
+              "portal_orange_placed",
+              "portal_blue_placed"
+            ],
+            "planner_name": "none",
+            "planner_calls": 0,
+            "planner_triggers": {},
+            "total_planner_ms": 0.0,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 0,
+            "memory_entries": []
+          },
+          {
+            "chamber_id": 102,
+            "chamber_name": "M2: Fizzler-Gated Decoy Cube",
+            "success": false,
+            "steps": 380,
+            "reward": 6.0,
+            "milestones": [
+              "cube_contact",
+              "cube_grabbed",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0"
+            ],
+            "planner_name": "none",
+            "planner_calls": 0,
+            "planner_triggers": {},
+            "total_planner_ms": 0.0,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 0,
+            "memory_entries": []
+          },
+          {
+            "chamber_id": 103,
+            "chamber_name": "M3: Three-Stage Compound Vault",
+            "success": false,
+            "steps": 520,
+            "reward": 60.0,
+            "milestones": [
+              "portal_orange_placed",
+              "portal_blue_placed",
+              "portals_bridged",
+              "portal_traversed",
+              "cube_contact",
+              "cube_grabbed"
+            ],
+            "planner_name": "none",
+            "planner_calls": 0,
+            "planner_triggers": {},
+            "total_planner_ms": 0.0,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 0,
+            "memory_entries": []
+          }
+        ],
+        "standard_passed": 7,
+        "standard_total": 7,
+        "multistage_passed": 0,
+        "multistage_total": 3,
+        "total_planner_calls": 0,
+        "total_fallbacks": 0,
+        "total_validation_warnings": 0
+      },
+      "4-layer (rule)": {
+        "standard": [
+          {
+            "chamber_id": 1,
+            "chamber_name": "The Hallway",
+            "success": true,
+            "steps": 16,
+            "reward": 99.2,
+            "milestones": [
+              "exit_reached"
+            ],
+            "planner_name": "rule",
+            "planner_calls": 1,
+            "planner_triggers": {
+              "episode_start": 1
+            },
+            "total_planner_ms": 0.029,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 1,
+            "memory_entries": []
+          },
+          {
+            "chamber_id": 2,
+            "chamber_name": "The Pedestal",
+            "success": true,
+            "steps": 18,
+            "reward": 124.1,
+            "milestones": [
+              "button_pressed",
+              "exit_reached"
+            ],
+            "planner_name": "rule",
+            "planner_calls": 2,
+            "planner_triggers": {
+              "episode_start": 1,
+              "exit_opened": 1
+            },
+            "total_planner_ms": 0.026,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 2,
+            "memory_entries": [
+              {
+                "tick": 8,
+                "event": "button_activated",
+                "entity_ids": [
+                  "c2_pedestal_0"
+                ],
+                "note": "pedestal_button c2_pedestal_0 activated"
+              },
+              {
+                "tick": 8,
+                "event": "exit_opened",
+                "entity_ids": [
+                  "c2_exit_0"
+                ],
+                "note": "exit door c2_exit_0 is now open"
+              }
+            ]
+          },
+          {
+            "chamber_id": 3,
+            "chamber_name": "Box on Button",
+            "success": true,
+            "steps": 27,
+            "reward": 148.65,
+            "milestones": [
+              "cube_contact",
+              "cube_grabbed",
+              "button_pressed",
+              "exit_reached"
+            ],
+            "planner_name": "rule",
+            "planner_calls": 2,
+            "planner_triggers": {
+              "episode_start": 1,
+              "exit_opened": 1
+            },
+            "total_planner_ms": 0.023,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 2,
+            "memory_entries": [
+              {
+                "tick": 20,
+                "event": "button_activated",
+                "entity_ids": [
+                  "c3_floor_btn_0"
+                ],
+                "note": "floor_button c3_floor_btn_0 activated"
+              },
+              {
+                "tick": 20,
+                "event": "exit_opened",
+                "entity_ids": [
+                  "c3_exit_0"
+                ],
+                "note": "exit door c3_exit_0 is now open"
+              }
+            ]
+          },
+          {
+            "chamber_id": 4,
+            "chamber_name": "The Simple Gap",
+            "success": true,
+            "steps": 10,
+            "reward": 160.5,
+            "milestones": [
+              "portal_orange_placed",
+              "portal_blue_placed",
+              "portals_bridged",
+              "portal_traversed",
+              "exit_reached"
+            ],
+            "planner_name": "rule",
+            "planner_calls": 1,
+            "planner_triggers": {
+              "episode_start": 1
+            },
+            "total_planner_ms": 0.005,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 1,
+            "memory_entries": []
+          },
+          {
+            "chamber_id": 5,
+            "chamber_name": "Held-Out Generalization Test",
+            "success": true,
+            "steps": 45,
+            "reward": 208.75,
+            "milestones": [
+              "portal_orange_placed",
+              "portal_blue_placed",
+              "portals_bridged",
+              "portal_traversed",
+              "cube_contact",
+              "cube_grabbed",
+              "button_pressed",
+              "exit_reached"
+            ],
+            "planner_name": "rule",
+            "planner_calls": 2,
+            "planner_triggers": {
+              "episode_start": 1,
+              "exit_opened": 1
+            },
+            "total_planner_ms": 0.02,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 2,
+            "memory_entries": [
+              {
+                "tick": 36,
+                "event": "button_activated",
+                "entity_ids": [
+                  "c5_floor_btn_0"
+                ],
+                "note": "floor_button c5_floor_btn_0 activated"
+              },
+              {
+                "tick": 36,
+                "event": "exit_opened",
+                "entity_ids": [
+                  "c5_exit_0"
+                ],
+                "note": "exit door c5_exit_0 is now open"
+              }
+            ]
+          },
+          {
+            "chamber_id": 6,
+            "chamber_name": "Held-Out: Button Across Gap",
+            "success": true,
+            "steps": 37,
+            "reward": 209.15,
+            "milestones": [
+              "cube_contact",
+              "cube_grabbed",
+              "portal_orange_placed",
+              "portal_blue_placed",
+              "portals_bridged",
+              "portal_traversed",
+              "button_pressed",
+              "exit_reached"
+            ],
+            "planner_name": "rule",
+            "planner_calls": 2,
+            "planner_triggers": {
+              "episode_start": 1,
+              "exit_opened": 1
+            },
+            "total_planner_ms": 0.023,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 2,
+            "memory_entries": [
+              {
+                "tick": 18,
+                "event": "button_activated",
+                "entity_ids": [
+                  "c6_floor_btn_0"
+                ],
+                "note": "floor_button c6_floor_btn_0 activated"
+              },
+              {
+                "tick": 18,
+                "event": "exit_opened",
+                "entity_ids": [
+                  "c6_exit_0"
+                ],
+                "note": "exit door c6_exit_0 is now open"
+              }
+            ]
+          },
+          {
+            "chamber_id": 7,
+            "chamber_name": "Held-Out: Three-Zone Relay",
+            "success": true,
+            "steps": 28,
+            "reward": 209.6,
+            "milestones": [
+              "portal_orange_placed",
+              "portal_blue_placed",
+              "portals_bridged",
+              "portal_traversed",
+              "cube_contact",
+              "cube_grabbed",
+              "button_pressed",
+              "exit_reached"
+            ],
+            "planner_name": "rule",
+            "planner_calls": 2,
+            "planner_triggers": {
+              "episode_start": 1,
+              "exit_opened": 1
+            },
+            "total_planner_ms": 0.018,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 2,
+            "memory_entries": [
+              {
+                "tick": 19,
+                "event": "button_activated",
+                "entity_ids": [
+                  "c7_floor_btn_0"
+                ],
+                "note": "floor_button c7_floor_btn_0 activated"
+              },
+              {
+                "tick": 19,
+                "event": "exit_opened",
+                "entity_ids": [
+                  "c7_exit_0"
+                ],
+                "note": "exit door c7_exit_0 is now open"
+              }
+            ]
+          }
+        ],
+        "multistage": [
+          {
+            "chamber_id": 101,
+            "chamber_name": "M1: Dual-Button Relay",
+            "success": true,
+            "steps": 69,
+            "reward": 207.55,
+            "milestones": [
+              "cube_contact",
+              "cube_grabbed",
+              "button_pressed",
+              "portal_orange_placed",
+              "portal_blue_placed",
+              "portals_bridged",
+              "portal_traversed",
+              "exit_reached"
+            ],
+            "planner_name": "rule",
+            "planner_calls": 3,
+            "planner_triggers": {
+              "episode_start": 1,
+              "subgoal_completed": 1,
+              "exit_opened": 1
+            },
+            "total_planner_ms": 0.031,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 3,
+            "memory_entries": [
+              {
+                "tick": 18,
+                "event": "button_activated",
+                "entity_ids": [
+                  "m1_floor_btn_1"
+                ],
+                "note": "floor_button m1_floor_btn_1 activated"
+              },
+              {
+                "tick": 59,
+                "event": "button_activated",
+                "entity_ids": [
+                  "m1_floor_btn_0"
+                ],
+                "note": "floor_button m1_floor_btn_0 activated"
+              },
+              {
+                "tick": 59,
+                "event": "exit_opened",
+                "entity_ids": [
+                  "m1_exit_0"
+                ],
+                "note": "exit door m1_exit_0 is now open"
+              }
+            ]
+          },
+          {
+            "chamber_id": 102,
+            "chamber_name": "M2: Fizzler-Gated Decoy Cube",
+            "success": true,
+            "steps": 66,
+            "reward": 207.7,
+            "milestones": [
+              "cube_contact",
+              "cube_grabbed",
+              "cube_fizzled:m2_cube_0",
+              "portal_orange_placed",
+              "portal_blue_placed",
+              "portals_bridged",
+              "portal_traversed",
+              "button_pressed",
+              "exit_reached"
+            ],
+            "planner_name": "rule",
+            "planner_calls": 3,
+            "planner_triggers": {
+              "episode_start": 1,
+              "cube_fizzled": 1,
+              "exit_opened": 1
+            },
+            "total_planner_ms": 0.041,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 3,
+            "memory_entries": [
+              {
+                "tick": 20,
+                "event": "cube_fizzled",
+                "entity_ids": [
+                  "m2_cube_0"
+                ],
+                "note": "cube m2_cube_0 vaporized by fizzler; avoid reusing this cube"
+              },
+              {
+                "tick": 59,
+                "event": "button_activated",
+                "entity_ids": [
+                  "m2_floor_btn_0"
+                ],
+                "note": "floor_button m2_floor_btn_0 activated"
+              },
+              {
+                "tick": 59,
+                "event": "exit_opened",
+                "entity_ids": [
+                  "m2_exit_0"
+                ],
+                "note": "exit door m2_exit_0 is now open"
+              }
+            ]
+          },
+          {
+            "chamber_id": 103,
+            "chamber_name": "M3: Three-Stage Compound Vault",
+            "success": true,
+            "steps": 94,
+            "reward": 206.3,
+            "milestones": [
+              "portal_orange_placed",
+              "portal_blue_placed",
+              "portals_bridged",
+              "portal_traversed",
+              "cube_contact",
+              "cube_grabbed",
+              "button_pressed",
+              "exit_reached"
+            ],
+            "planner_name": "rule",
+            "planner_calls": 4,
+            "planner_triggers": {
+              "episode_start": 1,
+              "subgoal_completed": 2,
+              "exit_opened": 1
+            },
+            "total_planner_ms": 0.059,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 4,
+            "memory_entries": [
+              {
+                "tick": 45,
+                "event": "button_activated",
+                "entity_ids": [
+                  "m3_floor_btn_0"
+                ],
+                "note": "floor_button m3_floor_btn_0 activated"
+              },
+              {
+                "tick": 78,
+                "event": "button_activated",
+                "entity_ids": [
+                  "m3_floor_btn_1"
+                ],
+                "note": "floor_button m3_floor_btn_1 activated"
+              },
+              {
+                "tick": 87,
+                "event": "button_activated",
+                "entity_ids": [
+                  "m3_pedestal_0"
+                ],
+                "note": "pedestal_button m3_pedestal_0 activated"
+              },
+              {
+                "tick": 87,
+                "event": "exit_opened",
+                "entity_ids": [
+                  "m3_exit_0"
+                ],
+                "note": "exit door m3_exit_0 is now open"
+              }
+            ]
+          }
+        ],
+        "standard_passed": 7,
+        "standard_total": 7,
+        "multistage_passed": 3,
+        "multistage_total": 3,
+        "total_planner_calls": 22,
+        "total_fallbacks": 0,
+        "total_validation_warnings": 0
+      },
+      "4-layer (llm:liquid/lfm2.5-1.2b)": {
+        "standard": [
+          {
+            "chamber_id": 1,
+            "chamber_name": "The Hallway",
+            "success": true,
+            "steps": 16,
+            "reward": 99.2,
+            "milestones": [
+              "exit_reached"
+            ],
+            "planner_name": "llm:liquid/lfm2.5-1.2b",
+            "planner_calls": 1,
+            "planner_triggers": {
+              "episode_start": 1
+            },
+            "total_planner_ms": 536.574,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 1,
+            "memory_entries": []
+          },
+          {
+            "chamber_id": 2,
+            "chamber_name": "The Pedestal",
+            "success": true,
+            "steps": 18,
+            "reward": 124.1,
+            "milestones": [
+              "button_pressed",
+              "exit_reached"
+            ],
+            "planner_name": "llm:liquid/lfm2.5-1.2b",
+            "planner_calls": 2,
+            "planner_triggers": {
+              "episode_start": 1,
+              "exit_opened": 1
+            },
+            "total_planner_ms": 629.625,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 2,
+            "memory_entries": [
+              {
+                "tick": 8,
+                "event": "button_activated",
+                "entity_ids": [
+                  "c2_pedestal_0"
+                ],
+                "note": "pedestal_button c2_pedestal_0 activated"
+              },
+              {
+                "tick": 8,
+                "event": "exit_opened",
+                "entity_ids": [
+                  "c2_exit_0"
+                ],
+                "note": "exit door c2_exit_0 is now open"
+              }
+            ]
+          },
+          {
+            "chamber_id": 3,
+            "chamber_name": "Box on Button",
+            "success": true,
+            "steps": 27,
+            "reward": 148.65,
+            "milestones": [
+              "cube_contact",
+              "cube_grabbed",
+              "button_pressed",
+              "exit_reached"
+            ],
+            "planner_name": "llm:liquid/lfm2.5-1.2b",
+            "planner_calls": 2,
+            "planner_triggers": {
+              "episode_start": 1,
+              "exit_opened": 1
+            },
+            "total_planner_ms": 693.664,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 2,
+            "memory_entries": [
+              {
+                "tick": 20,
+                "event": "button_activated",
+                "entity_ids": [
+                  "c3_floor_btn_0"
+                ],
+                "note": "floor_button c3_floor_btn_0 activated"
+              },
+              {
+                "tick": 20,
+                "event": "exit_opened",
+                "entity_ids": [
+                  "c3_exit_0"
+                ],
+                "note": "exit door c3_exit_0 is now open"
+              }
+            ]
+          },
+          {
+            "chamber_id": 4,
+            "chamber_name": "The Simple Gap",
+            "success": true,
+            "steps": 10,
+            "reward": 160.5,
+            "milestones": [
+              "portal_orange_placed",
+              "portal_blue_placed",
+              "portals_bridged",
+              "portal_traversed",
+              "exit_reached"
+            ],
+            "planner_name": "llm:liquid/lfm2.5-1.2b",
+            "planner_calls": 1,
+            "planner_triggers": {
+              "episode_start": 1
+            },
+            "total_planner_ms": 269.092,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 1,
+            "memory_entries": []
+          },
+          {
+            "chamber_id": 5,
+            "chamber_name": "Held-Out Generalization Test",
+            "success": true,
+            "steps": 45,
+            "reward": 208.75,
+            "milestones": [
+              "portal_orange_placed",
+              "portal_blue_placed",
+              "portals_bridged",
+              "portal_traversed",
+              "cube_contact",
+              "cube_grabbed",
+              "button_pressed",
+              "exit_reached"
+            ],
+            "planner_name": "llm:liquid/lfm2.5-1.2b",
+            "planner_calls": 2,
+            "planner_triggers": {
+              "episode_start": 1,
+              "exit_opened": 1
+            },
+            "total_planner_ms": 1151.419,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 2,
+            "memory_entries": [
+              {
+                "tick": 36,
+                "event": "button_activated",
+                "entity_ids": [
+                  "c5_floor_btn_0"
+                ],
+                "note": "floor_button c5_floor_btn_0 activated"
+              },
+              {
+                "tick": 36,
+                "event": "exit_opened",
+                "entity_ids": [
+                  "c5_exit_0"
+                ],
+                "note": "exit door c5_exit_0 is now open"
+              }
+            ]
+          },
+          {
+            "chamber_id": 6,
+            "chamber_name": "Held-Out: Button Across Gap",
+            "success": true,
+            "steps": 37,
+            "reward": 209.15,
+            "milestones": [
+              "cube_contact",
+              "cube_grabbed",
+              "portal_orange_placed",
+              "portal_blue_placed",
+              "portals_bridged",
+              "portal_traversed",
+              "button_pressed",
+              "exit_reached"
+            ],
+            "planner_name": "llm:liquid/lfm2.5-1.2b",
+            "planner_calls": 2,
+            "planner_triggers": {
+              "episode_start": 1,
+              "exit_opened": 1
+            },
+            "total_planner_ms": 626.473,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 2,
+            "memory_entries": [
+              {
+                "tick": 18,
+                "event": "button_activated",
+                "entity_ids": [
+                  "c6_floor_btn_0"
+                ],
+                "note": "floor_button c6_floor_btn_0 activated"
+              },
+              {
+                "tick": 18,
+                "event": "exit_opened",
+                "entity_ids": [
+                  "c6_exit_0"
+                ],
+                "note": "exit door c6_exit_0 is now open"
+              }
+            ]
+          },
+          {
+            "chamber_id": 7,
+            "chamber_name": "Held-Out: Three-Zone Relay",
+            "success": true,
+            "steps": 28,
+            "reward": 209.6,
+            "milestones": [
+              "portal_orange_placed",
+              "portal_blue_placed",
+              "portals_bridged",
+              "portal_traversed",
+              "cube_contact",
+              "cube_grabbed",
+              "button_pressed",
+              "exit_reached"
+            ],
+            "planner_name": "llm:liquid/lfm2.5-1.2b",
+            "planner_calls": 2,
+            "planner_triggers": {
+              "episode_start": 1,
+              "exit_opened": 1
+            },
+            "total_planner_ms": 653.171,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 2,
+            "memory_entries": [
+              {
+                "tick": 19,
+                "event": "button_activated",
+                "entity_ids": [
+                  "c7_floor_btn_0"
+                ],
+                "note": "floor_button c7_floor_btn_0 activated"
+              },
+              {
+                "tick": 19,
+                "event": "exit_opened",
+                "entity_ids": [
+                  "c7_exit_0"
+                ],
+                "note": "exit door c7_exit_0 is now open"
+              }
+            ]
+          }
+        ],
+        "multistage": [
+          {
+            "chamber_id": 101,
+            "chamber_name": "M1: Dual-Button Relay",
+            "success": false,
+            "steps": 380,
+            "reward": 92.0,
+            "milestones": [
+              "portal_orange_placed",
+              "portal_blue_placed",
+              "portals_bridged",
+              "portal_traversed",
+              "cube_contact",
+              "cube_grabbed",
+              "button_pressed"
+            ],
+            "planner_name": "llm:liquid/lfm2.5-1.2b",
+            "planner_calls": 9,
+            "planner_triggers": {
+              "episode_start": 1,
+              "subgoal_completed": 1,
+              "stall_detected": 7
+            },
+            "total_planner_ms": 3309.329,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 1,
+            "memory_entries": [
+              {
+                "tick": 38,
+                "event": "button_activated",
+                "entity_ids": [
+                  "m1_floor_btn_1"
+                ],
+                "note": "floor_button m1_floor_btn_1 activated"
+              },
+              {
+                "tick": 353,
+                "event": "cube_stalled",
+                "entity_ids": [
+                  "m1_cube_1"
+                ],
+                "note": "no progress for 45 ticks while targeting m1_cube_1"
+              }
+            ]
+          },
+          {
+            "chamber_id": 102,
+            "chamber_name": "M2: Fizzler-Gated Decoy Cube",
+            "success": true,
+            "steps": 42,
+            "reward": 208.9,
+            "milestones": [
+              "portal_orange_placed",
+              "portal_blue_placed",
+              "portals_bridged",
+              "portal_traversed",
+              "cube_contact",
+              "cube_grabbed",
+              "button_pressed",
+              "exit_reached"
+            ],
+            "planner_name": "llm:liquid/lfm2.5-1.2b",
+            "planner_calls": 2,
+            "planner_triggers": {
+              "episode_start": 1,
+              "exit_opened": 1
+            },
+            "total_planner_ms": 626.067,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 2,
+            "memory_entries": [
+              {
+                "tick": 35,
+                "event": "button_activated",
+                "entity_ids": [
+                  "m2_floor_btn_0"
+                ],
+                "note": "floor_button m2_floor_btn_0 activated"
+              },
+              {
+                "tick": 35,
+                "event": "exit_opened",
+                "entity_ids": [
+                  "m2_exit_0"
+                ],
+                "note": "exit door m2_exit_0 is now open"
+              }
+            ]
+          },
+          {
+            "chamber_id": 103,
+            "chamber_name": "M3: Three-Stage Compound Vault",
+            "success": false,
+            "steps": 520,
+            "reward": 85.0,
+            "milestones": [
+              "portal_orange_placed",
+              "portal_blue_placed",
+              "portals_bridged",
+              "portal_traversed",
+              "cube_contact",
+              "cube_grabbed",
+              "button_pressed"
+            ],
+            "planner_name": "llm:liquid/lfm2.5-1.2b",
+            "planner_calls": 12,
+            "planner_triggers": {
+              "episode_start": 1,
+              "subgoal_completed": 1,
+              "stall_detected": 10
+            },
+            "total_planner_ms": 4372.431,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 1,
+            "memory_entries": [
+              {
+                "tick": 28,
+                "event": "button_activated",
+                "entity_ids": [
+                  "m3_floor_btn_1"
+                ],
+                "note": "floor_button m3_floor_btn_1 activated"
+              },
+              {
+                "tick": 478,
+                "event": "cube_stalled",
+                "entity_ids": [
+                  "m3_cube_1"
+                ],
+                "note": "no progress for 45 ticks while targeting m3_cube_1"
+              }
+            ]
+          }
+        ],
+        "standard_passed": 7,
+        "standard_total": 7,
+        "multistage_passed": 1,
+        "multistage_total": 3,
+        "total_planner_calls": 35,
+        "total_fallbacks": 0,
+        "total_validation_warnings": 0
+      }
+    },
+    "neural_2b": {
+      "3-layer (none)": {
+        "standard": [
+          {
+            "chamber_id": 1,
+            "chamber_name": "The Hallway",
+            "success": true,
+            "steps": 16,
+            "reward": 99.2,
+            "milestones": [
+              "exit_reached"
+            ],
+            "planner_name": "none",
+            "planner_calls": 0,
+            "planner_triggers": {},
+            "total_planner_ms": 0.0,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 0,
+            "memory_entries": []
+          },
+          {
+            "chamber_id": 2,
+            "chamber_name": "The Pedestal",
+            "success": true,
+            "steps": 18,
+            "reward": 124.1,
+            "milestones": [
+              "button_pressed",
+              "exit_reached"
+            ],
+            "planner_name": "none",
+            "planner_calls": 0,
+            "planner_triggers": {},
+            "total_planner_ms": 0.0,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 0,
+            "memory_entries": []
+          },
+          {
+            "chamber_id": 3,
+            "chamber_name": "Box on Button",
+            "success": true,
+            "steps": 27,
+            "reward": 148.65,
+            "milestones": [
+              "cube_contact",
+              "cube_grabbed",
+              "button_pressed",
+              "exit_reached"
+            ],
+            "planner_name": "none",
+            "planner_calls": 0,
+            "planner_triggers": {},
+            "total_planner_ms": 0.0,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 0,
+            "memory_entries": []
+          },
+          {
+            "chamber_id": 4,
+            "chamber_name": "The Simple Gap",
+            "success": true,
+            "steps": 20,
+            "reward": 160.0,
+            "milestones": [
+              "portal_orange_placed",
+              "portal_blue_placed",
+              "portals_bridged",
+              "portal_traversed",
+              "exit_reached"
+            ],
+            "planner_name": "none",
+            "planner_calls": 0,
+            "planner_triggers": {},
+            "total_planner_ms": 0.0,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 0,
+            "memory_entries": []
+          },
+          {
+            "chamber_id": 5,
+            "chamber_name": "Held-Out Generalization Test",
+            "success": true,
+            "steps": 67,
+            "reward": 207.65,
+            "milestones": [
+              "portal_orange_placed",
+              "portal_blue_placed",
+              "portals_bridged",
+              "portal_traversed",
+              "cube_contact",
+              "cube_grabbed",
+              "button_pressed",
+              "exit_reached"
+            ],
+            "planner_name": "none",
+            "planner_calls": 0,
+            "planner_triggers": {},
+            "total_planner_ms": 0.0,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 0,
+            "memory_entries": []
+          },
+          {
+            "chamber_id": 6,
+            "chamber_name": "Held-Out: Button Across Gap",
+            "success": true,
+            "steps": 56,
+            "reward": 208.2,
+            "milestones": [
+              "cube_contact",
+              "cube_grabbed",
+              "portal_orange_placed",
+              "portal_blue_placed",
+              "portals_bridged",
+              "portal_traversed",
+              "button_pressed",
+              "exit_reached"
+            ],
+            "planner_name": "none",
+            "planner_calls": 0,
+            "planner_triggers": {},
+            "total_planner_ms": 0.0,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 0,
+            "memory_entries": []
+          },
+          {
+            "chamber_id": 7,
+            "chamber_name": "Held-Out: Three-Zone Relay",
+            "success": true,
+            "steps": 62,
+            "reward": 207.9,
+            "milestones": [
+              "portal_orange_placed",
+              "portal_blue_placed",
+              "portals_bridged",
+              "portal_traversed",
+              "cube_contact",
+              "cube_grabbed",
+              "button_pressed",
+              "exit_reached"
+            ],
+            "planner_name": "none",
+            "planner_calls": 0,
+            "planner_triggers": {},
+            "total_planner_ms": 0.0,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 0,
+            "memory_entries": []
+          }
+        ],
+        "multistage": [
+          {
+            "chamber_id": 101,
+            "chamber_name": "M1: Dual-Button Relay",
+            "success": false,
+            "steps": 380,
+            "reward": 47.0,
+            "milestones": [
+              "cube_contact",
+              "cube_grabbed",
+              "button_pressed",
+              "portal_orange_placed",
+              "portal_blue_placed"
+            ],
+            "planner_name": "none",
+            "planner_calls": 0,
+            "planner_triggers": {},
+            "total_planner_ms": 0.0,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 0,
+            "memory_entries": []
+          },
+          {
+            "chamber_id": 102,
+            "chamber_name": "M2: Fizzler-Gated Decoy Cube",
+            "success": false,
+            "steps": 380,
+            "reward": 6.0,
+            "milestones": [
+              "cube_contact",
+              "cube_grabbed",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0",
+              "cube_fizzled:m2_cube_0"
+            ],
+            "planner_name": "none",
+            "planner_calls": 0,
+            "planner_triggers": {},
+            "total_planner_ms": 0.0,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 0,
+            "memory_entries": []
+          },
+          {
+            "chamber_id": 103,
+            "chamber_name": "M3: Three-Stage Compound Vault",
+            "success": false,
+            "steps": 520,
+            "reward": 60.0,
+            "milestones": [
+              "portal_orange_placed",
+              "portal_blue_placed",
+              "portals_bridged",
+              "portal_traversed",
+              "cube_contact",
+              "cube_grabbed"
+            ],
+            "planner_name": "none",
+            "planner_calls": 0,
+            "planner_triggers": {},
+            "total_planner_ms": 0.0,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 0,
+            "memory_entries": []
+          }
+        ],
+        "standard_passed": 7,
+        "standard_total": 7,
+        "multistage_passed": 0,
+        "multistage_total": 3,
+        "total_planner_calls": 0,
+        "total_fallbacks": 0,
+        "total_validation_warnings": 0
+      },
+      "4-layer (rule)": {
+        "standard": [
+          {
+            "chamber_id": 1,
+            "chamber_name": "The Hallway",
+            "success": true,
+            "steps": 16,
+            "reward": 99.2,
+            "milestones": [
+              "exit_reached"
+            ],
+            "planner_name": "rule",
+            "planner_calls": 1,
+            "planner_triggers": {
+              "episode_start": 1
+            },
+            "total_planner_ms": 0.01,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 1,
+            "memory_entries": []
+          },
+          {
+            "chamber_id": 2,
+            "chamber_name": "The Pedestal",
+            "success": true,
+            "steps": 18,
+            "reward": 124.1,
+            "milestones": [
+              "button_pressed",
+              "exit_reached"
+            ],
+            "planner_name": "rule",
+            "planner_calls": 2,
+            "planner_triggers": {
+              "episode_start": 1,
+              "exit_opened": 1
+            },
+            "total_planner_ms": 0.019,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 2,
+            "memory_entries": [
+              {
+                "tick": 8,
+                "event": "button_activated",
+                "entity_ids": [
+                  "c2_pedestal_0"
+                ],
+                "note": "pedestal_button c2_pedestal_0 activated"
+              },
+              {
+                "tick": 8,
+                "event": "exit_opened",
+                "entity_ids": [
+                  "c2_exit_0"
+                ],
+                "note": "exit door c2_exit_0 is now open"
+              }
+            ]
+          },
+          {
+            "chamber_id": 3,
+            "chamber_name": "Box on Button",
+            "success": true,
+            "steps": 27,
+            "reward": 148.65,
+            "milestones": [
+              "cube_contact",
+              "cube_grabbed",
+              "button_pressed",
+              "exit_reached"
+            ],
+            "planner_name": "rule",
+            "planner_calls": 2,
+            "planner_triggers": {
+              "episode_start": 1,
+              "exit_opened": 1
+            },
+            "total_planner_ms": 0.015,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 2,
+            "memory_entries": [
+              {
+                "tick": 20,
+                "event": "button_activated",
+                "entity_ids": [
+                  "c3_floor_btn_0"
+                ],
+                "note": "floor_button c3_floor_btn_0 activated"
+              },
+              {
+                "tick": 20,
+                "event": "exit_opened",
+                "entity_ids": [
+                  "c3_exit_0"
+                ],
+                "note": "exit door c3_exit_0 is now open"
+              }
+            ]
+          },
+          {
+            "chamber_id": 4,
+            "chamber_name": "The Simple Gap",
+            "success": true,
+            "steps": 20,
+            "reward": 160.0,
+            "milestones": [
+              "portal_orange_placed",
+              "portal_blue_placed",
+              "portals_bridged",
+              "portal_traversed",
+              "exit_reached"
+            ],
+            "planner_name": "rule",
+            "planner_calls": 1,
+            "planner_triggers": {
+              "episode_start": 1
+            },
+            "total_planner_ms": 0.003,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 1,
+            "memory_entries": []
+          },
+          {
+            "chamber_id": 5,
+            "chamber_name": "Held-Out Generalization Test",
+            "success": true,
+            "steps": 67,
+            "reward": 207.65,
+            "milestones": [
+              "portal_orange_placed",
+              "portal_blue_placed",
+              "portals_bridged",
+              "portal_traversed",
+              "cube_contact",
+              "cube_grabbed",
+              "button_pressed",
+              "exit_reached"
+            ],
+            "planner_name": "rule",
+            "planner_calls": 2,
+            "planner_triggers": {
+              "episode_start": 1,
+              "exit_opened": 1
+            },
+            "total_planner_ms": 0.016,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 2,
+            "memory_entries": [
+              {
+                "tick": 57,
+                "event": "button_activated",
+                "entity_ids": [
+                  "c5_floor_btn_0"
+                ],
+                "note": "floor_button c5_floor_btn_0 activated"
+              },
+              {
+                "tick": 57,
+                "event": "exit_opened",
+                "entity_ids": [
+                  "c5_exit_0"
+                ],
+                "note": "exit door c5_exit_0 is now open"
+              }
+            ]
+          },
+          {
+            "chamber_id": 6,
+            "chamber_name": "Held-Out: Button Across Gap",
+            "success": true,
+            "steps": 56,
+            "reward": 208.2,
+            "milestones": [
+              "cube_contact",
+              "cube_grabbed",
+              "portal_orange_placed",
+              "portal_blue_placed",
+              "portals_bridged",
+              "portal_traversed",
+              "button_pressed",
+              "exit_reached"
+            ],
+            "planner_name": "rule",
+            "planner_calls": 2,
+            "planner_triggers": {
+              "episode_start": 1,
+              "exit_opened": 1
+            },
+            "total_planner_ms": 0.018,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 2,
+            "memory_entries": [
+              {
+                "tick": 30,
+                "event": "button_activated",
+                "entity_ids": [
+                  "c6_floor_btn_0"
+                ],
+                "note": "floor_button c6_floor_btn_0 activated"
+              },
+              {
+                "tick": 30,
+                "event": "exit_opened",
+                "entity_ids": [
+                  "c6_exit_0"
+                ],
+                "note": "exit door c6_exit_0 is now open"
+              }
+            ]
+          },
+          {
+            "chamber_id": 7,
+            "chamber_name": "Held-Out: Three-Zone Relay",
+            "success": true,
+            "steps": 62,
+            "reward": 207.9,
+            "milestones": [
+              "portal_orange_placed",
+              "portal_blue_placed",
+              "portals_bridged",
+              "portal_traversed",
+              "cube_contact",
+              "cube_grabbed",
+              "button_pressed",
+              "exit_reached"
+            ],
+            "planner_name": "rule",
+            "planner_calls": 2,
+            "planner_triggers": {
+              "episode_start": 1,
+              "exit_opened": 1
+            },
+            "total_planner_ms": 0.011,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 2,
+            "memory_entries": [
+              {
+                "tick": 41,
+                "event": "button_activated",
+                "entity_ids": [
+                  "c7_floor_btn_0"
+                ],
+                "note": "floor_button c7_floor_btn_0 activated"
+              },
+              {
+                "tick": 41,
+                "event": "exit_opened",
+                "entity_ids": [
+                  "c7_exit_0"
+                ],
+                "note": "exit door c7_exit_0 is now open"
+              }
+            ]
+          }
+        ],
+        "multistage": [
+          {
+            "chamber_id": 101,
+            "chamber_name": "M1: Dual-Button Relay",
+            "success": true,
+            "steps": 87,
+            "reward": 206.65,
+            "milestones": [
+              "cube_contact",
+              "cube_grabbed",
+              "button_pressed",
+              "portal_orange_placed",
+              "portal_blue_placed",
+              "portals_bridged",
+              "portal_traversed",
+              "exit_reached"
+            ],
+            "planner_name": "rule",
+            "planner_calls": 3,
+            "planner_triggers": {
+              "episode_start": 1,
+              "subgoal_completed": 1,
+              "exit_opened": 1
+            },
+            "total_planner_ms": 0.023,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 3,
+            "memory_entries": [
+              {
+                "tick": 18,
+                "event": "button_activated",
+                "entity_ids": [
+                  "m1_floor_btn_1"
+                ],
+                "note": "floor_button m1_floor_btn_1 activated"
+              },
+              {
+                "tick": 77,
+                "event": "button_activated",
+                "entity_ids": [
+                  "m1_floor_btn_0"
+                ],
+                "note": "floor_button m1_floor_btn_0 activated"
+              },
+              {
+                "tick": 77,
+                "event": "exit_opened",
+                "entity_ids": [
+                  "m1_exit_0"
+                ],
+                "note": "exit door m1_exit_0 is now open"
+              }
+            ]
+          },
+          {
+            "chamber_id": 102,
+            "chamber_name": "M2: Fizzler-Gated Decoy Cube",
+            "success": true,
+            "steps": 82,
+            "reward": 206.9,
+            "milestones": [
+              "cube_contact",
+              "cube_grabbed",
+              "cube_fizzled:m2_cube_0",
+              "portal_orange_placed",
+              "portal_blue_placed",
+              "portals_bridged",
+              "portal_traversed",
+              "button_pressed",
+              "exit_reached"
+            ],
+            "planner_name": "rule",
+            "planner_calls": 3,
+            "planner_triggers": {
+              "episode_start": 1,
+              "cube_fizzled": 1,
+              "exit_opened": 1
+            },
+            "total_planner_ms": 0.023,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 3,
+            "memory_entries": [
+              {
+                "tick": 20,
+                "event": "cube_fizzled",
+                "entity_ids": [
+                  "m2_cube_0"
+                ],
+                "note": "cube m2_cube_0 vaporized by fizzler; avoid reusing this cube"
+              },
+              {
+                "tick": 75,
+                "event": "button_activated",
+                "entity_ids": [
+                  "m2_floor_btn_0"
+                ],
+                "note": "floor_button m2_floor_btn_0 activated"
+              },
+              {
+                "tick": 75,
+                "event": "exit_opened",
+                "entity_ids": [
+                  "m2_exit_0"
+                ],
+                "note": "exit door m2_exit_0 is now open"
+              }
+            ]
+          },
+          {
+            "chamber_id": 103,
+            "chamber_name": "M3: Three-Stage Compound Vault",
+            "success": true,
+            "steps": 149,
+            "reward": 203.55,
+            "milestones": [
+              "portal_orange_placed",
+              "portal_blue_placed",
+              "portals_bridged",
+              "portal_traversed",
+              "cube_contact",
+              "cube_grabbed",
+              "button_pressed",
+              "exit_reached"
+            ],
+            "planner_name": "rule",
+            "planner_calls": 4,
+            "planner_triggers": {
+              "episode_start": 1,
+              "subgoal_completed": 2,
+              "exit_opened": 1
+            },
+            "total_planner_ms": 0.032,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 4,
+            "memory_entries": [
+              {
+                "tick": 68,
+                "event": "button_activated",
+                "entity_ids": [
+                  "m3_floor_btn_0"
+                ],
+                "note": "floor_button m3_floor_btn_0 activated"
+              },
+              {
+                "tick": 120,
+                "event": "button_activated",
+                "entity_ids": [
+                  "m3_floor_btn_1"
+                ],
+                "note": "floor_button m3_floor_btn_1 activated"
+              },
+              {
+                "tick": 141,
+                "event": "button_activated",
+                "entity_ids": [
+                  "m3_pedestal_0"
+                ],
+                "note": "pedestal_button m3_pedestal_0 activated"
+              },
+              {
+                "tick": 141,
+                "event": "exit_opened",
+                "entity_ids": [
+                  "m3_exit_0"
+                ],
+                "note": "exit door m3_exit_0 is now open"
+              }
+            ]
+          }
+        ],
+        "standard_passed": 7,
+        "standard_total": 7,
+        "multistage_passed": 3,
+        "multistage_total": 3,
+        "total_planner_calls": 22,
+        "total_fallbacks": 0,
+        "total_validation_warnings": 0
+      },
+      "4-layer (llm:liquid/lfm2.5-1.2b)": {
+        "standard": [
+          {
+            "chamber_id": 1,
+            "chamber_name": "The Hallway",
+            "success": true,
+            "steps": 16,
+            "reward": 99.2,
+            "milestones": [
+              "exit_reached"
+            ],
+            "planner_name": "llm:liquid/lfm2.5-1.2b",
+            "planner_calls": 1,
+            "planner_triggers": {
+              "episode_start": 1
+            },
+            "total_planner_ms": 253.915,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 1,
+            "memory_entries": []
+          },
+          {
+            "chamber_id": 2,
+            "chamber_name": "The Pedestal",
+            "success": true,
+            "steps": 18,
+            "reward": 124.1,
+            "milestones": [
+              "button_pressed",
+              "exit_reached"
+            ],
+            "planner_name": "llm:liquid/lfm2.5-1.2b",
+            "planner_calls": 2,
+            "planner_triggers": {
+              "episode_start": 1,
+              "exit_opened": 1
+            },
+            "total_planner_ms": 593.399,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 2,
+            "memory_entries": [
+              {
+                "tick": 8,
+                "event": "button_activated",
+                "entity_ids": [
+                  "c2_pedestal_0"
+                ],
+                "note": "pedestal_button c2_pedestal_0 activated"
+              },
+              {
+                "tick": 8,
+                "event": "exit_opened",
+                "entity_ids": [
+                  "c2_exit_0"
+                ],
+                "note": "exit door c2_exit_0 is now open"
+              }
+            ]
+          },
+          {
+            "chamber_id": 3,
+            "chamber_name": "Box on Button",
+            "success": true,
+            "steps": 27,
+            "reward": 148.65,
+            "milestones": [
+              "cube_contact",
+              "cube_grabbed",
+              "button_pressed",
+              "exit_reached"
+            ],
+            "planner_name": "llm:liquid/lfm2.5-1.2b",
+            "planner_calls": 2,
+            "planner_triggers": {
+              "episode_start": 1,
+              "exit_opened": 1
+            },
+            "total_planner_ms": 623.938,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 2,
+            "memory_entries": [
+              {
+                "tick": 20,
+                "event": "button_activated",
+                "entity_ids": [
+                  "c3_floor_btn_0"
+                ],
+                "note": "floor_button c3_floor_btn_0 activated"
+              },
+              {
+                "tick": 20,
+                "event": "exit_opened",
+                "entity_ids": [
+                  "c3_exit_0"
+                ],
+                "note": "exit door c3_exit_0 is now open"
+              }
+            ]
+          },
+          {
+            "chamber_id": 4,
+            "chamber_name": "The Simple Gap",
+            "success": true,
+            "steps": 20,
+            "reward": 160.0,
+            "milestones": [
+              "portal_orange_placed",
+              "portal_blue_placed",
+              "portals_bridged",
+              "portal_traversed",
+              "exit_reached"
+            ],
+            "planner_name": "llm:liquid/lfm2.5-1.2b",
+            "planner_calls": 1,
+            "planner_triggers": {
+              "episode_start": 1
+            },
+            "total_planner_ms": 271.228,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 1,
+            "memory_entries": []
+          },
+          {
+            "chamber_id": 5,
+            "chamber_name": "Held-Out Generalization Test",
+            "success": true,
+            "steps": 67,
+            "reward": 207.65,
+            "milestones": [
+              "portal_orange_placed",
+              "portal_blue_placed",
+              "portals_bridged",
+              "portal_traversed",
+              "cube_contact",
+              "cube_grabbed",
+              "button_pressed",
+              "exit_reached"
+            ],
+            "planner_name": "llm:liquid/lfm2.5-1.2b",
+            "planner_calls": 2,
+            "planner_triggers": {
+              "episode_start": 1,
+              "exit_opened": 1
+            },
+            "total_planner_ms": 651.827,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 2,
+            "memory_entries": [
+              {
+                "tick": 57,
+                "event": "button_activated",
+                "entity_ids": [
+                  "c5_floor_btn_0"
+                ],
+                "note": "floor_button c5_floor_btn_0 activated"
+              },
+              {
+                "tick": 57,
+                "event": "exit_opened",
+                "entity_ids": [
+                  "c5_exit_0"
+                ],
+                "note": "exit door c5_exit_0 is now open"
+              }
+            ]
+          },
+          {
+            "chamber_id": 6,
+            "chamber_name": "Held-Out: Button Across Gap",
+            "success": true,
+            "steps": 56,
+            "reward": 208.2,
+            "milestones": [
+              "cube_contact",
+              "cube_grabbed",
+              "portal_orange_placed",
+              "portal_blue_placed",
+              "portals_bridged",
+              "portal_traversed",
+              "button_pressed",
+              "exit_reached"
+            ],
+            "planner_name": "llm:liquid/lfm2.5-1.2b",
+            "planner_calls": 2,
+            "planner_triggers": {
+              "episode_start": 1,
+              "exit_opened": 1
+            },
+            "total_planner_ms": 628.763,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 2,
+            "memory_entries": [
+              {
+                "tick": 30,
+                "event": "button_activated",
+                "entity_ids": [
+                  "c6_floor_btn_0"
+                ],
+                "note": "floor_button c6_floor_btn_0 activated"
+              },
+              {
+                "tick": 30,
+                "event": "exit_opened",
+                "entity_ids": [
+                  "c6_exit_0"
+                ],
+                "note": "exit door c6_exit_0 is now open"
+              }
+            ]
+          },
+          {
+            "chamber_id": 7,
+            "chamber_name": "Held-Out: Three-Zone Relay",
+            "success": true,
+            "steps": 62,
+            "reward": 207.9,
+            "milestones": [
+              "portal_orange_placed",
+              "portal_blue_placed",
+              "portals_bridged",
+              "portal_traversed",
+              "cube_contact",
+              "cube_grabbed",
+              "button_pressed",
+              "exit_reached"
+            ],
+            "planner_name": "llm:liquid/lfm2.5-1.2b",
+            "planner_calls": 2,
+            "planner_triggers": {
+              "episode_start": 1,
+              "exit_opened": 1
+            },
+            "total_planner_ms": 662.473,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 2,
+            "memory_entries": [
+              {
+                "tick": 41,
+                "event": "button_activated",
+                "entity_ids": [
+                  "c7_floor_btn_0"
+                ],
+                "note": "floor_button c7_floor_btn_0 activated"
+              },
+              {
+                "tick": 41,
+                "event": "exit_opened",
+                "entity_ids": [
+                  "c7_exit_0"
+                ],
+                "note": "exit door c7_exit_0 is now open"
+              }
+            ]
+          }
+        ],
+        "multistage": [
+          {
+            "chamber_id": 101,
+            "chamber_name": "M1: Dual-Button Relay",
+            "success": false,
+            "steps": 380,
+            "reward": 92.0,
+            "milestones": [
+              "portal_orange_placed",
+              "portal_blue_placed",
+              "portals_bridged",
+              "portal_traversed",
+              "cube_contact",
+              "cube_grabbed",
+              "button_pressed"
+            ],
+            "planner_name": "llm:liquid/lfm2.5-1.2b",
+            "planner_calls": 9,
+            "planner_triggers": {
+              "episode_start": 1,
+              "subgoal_completed": 1,
+              "stall_detected": 7
+            },
+            "total_planner_ms": 3108.193,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 1,
+            "memory_entries": [
+              {
+                "tick": 61,
+                "event": "button_activated",
+                "entity_ids": [
+                  "m1_floor_btn_1"
+                ],
+                "note": "floor_button m1_floor_btn_1 activated"
+              },
+              {
+                "tick": 376,
+                "event": "cube_stalled",
+                "entity_ids": [
+                  "m1_cube_1"
+                ],
+                "note": "no progress for 45 ticks while targeting m1_cube_1"
+              }
+            ]
+          },
+          {
+            "chamber_id": 102,
+            "chamber_name": "M2: Fizzler-Gated Decoy Cube",
+            "success": true,
+            "steps": 65,
+            "reward": 207.75,
+            "milestones": [
+              "portal_orange_placed",
+              "portal_blue_placed",
+              "portals_bridged",
+              "portal_traversed",
+              "cube_contact",
+              "cube_grabbed",
+              "button_pressed",
+              "exit_reached"
+            ],
+            "planner_name": "llm:liquid/lfm2.5-1.2b",
+            "planner_calls": 2,
+            "planner_triggers": {
+              "episode_start": 1,
+              "exit_opened": 1
+            },
+            "total_planner_ms": 638.813,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 2,
+            "memory_entries": [
+              {
+                "tick": 58,
+                "event": "button_activated",
+                "entity_ids": [
+                  "m2_floor_btn_0"
+                ],
+                "note": "floor_button m2_floor_btn_0 activated"
+              },
+              {
+                "tick": 58,
+                "event": "exit_opened",
+                "entity_ids": [
+                  "m2_exit_0"
+                ],
+                "note": "exit door m2_exit_0 is now open"
+              }
+            ]
+          },
+          {
+            "chamber_id": 103,
+            "chamber_name": "M3: Three-Stage Compound Vault",
+            "success": false,
+            "steps": 520,
+            "reward": 85.0,
+            "milestones": [
+              "portal_orange_placed",
+              "portal_blue_placed",
+              "portals_bridged",
+              "portal_traversed",
+              "cube_contact",
+              "cube_grabbed",
+              "button_pressed"
+            ],
+            "planner_name": "llm:liquid/lfm2.5-1.2b",
+            "planner_calls": 12,
+            "planner_triggers": {
+              "episode_start": 1,
+              "subgoal_completed": 1,
+              "stall_detected": 10
+            },
+            "total_planner_ms": 4174.031,
+            "fallback_count": 0,
+            "validation_warnings": 0,
+            "role_switches": 1,
+            "memory_entries": [
+              {
+                "tick": 51,
+                "event": "button_activated",
+                "entity_ids": [
+                  "m3_floor_btn_1"
+                ],
+                "note": "floor_button m3_floor_btn_1 activated"
+              },
+              {
+                "tick": 501,
+                "event": "cube_stalled",
+                "entity_ids": [
+                  "m3_cube_1"
+                ],
+                "note": "no progress for 45 ticks while targeting m3_cube_1"
+              }
+            ]
+          }
+        ],
+        "standard_passed": 7,
+        "standard_total": 7,
+        "multistage_passed": 1,
+        "multistage_total": 3,
+        "total_planner_calls": 35,
+        "total_fallbacks": 0,
+        "total_validation_warnings": 0
+      }
+    }
+  }
+}

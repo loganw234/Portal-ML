@@ -61,10 +61,22 @@ Started 2026-11-26. Objective: prove a decoupled 3-layer neuroevolutionary reaso
 - **Verified live zero-shot solve on unmodified Valve `testchmb_a_02` Room 1 (Test Chamber 04)** using the frozen 24-node `champions/seed7_decoupled.bt` (trained strictly on synthetic mock Chambers 1–4): fastest verified solve **106 steps (11.87s, reward 174.70)**; saved pass trace `records/live_testchmb_a02_solve_2026-11-26.jsonl` (**286 steps, 33.68s, reward 165.70**, all 7 milestones: `portal_orange_placed`, `cube_grabbed`, `portal_traversed`, `portal_blue_placed`, `portals_bridged`, `button_pressed`, `exit_reached`). Honest limit: multi-run drop repeatability within 350 steps is ~1/3–2/3 due to Valve's duplicate-`targetname` dropper cube + VPhysics rim rolling (native `+use` / `CPlayerPickupController` carry-and-drop queued for motor hardening).
 - Re-verified **zero regressions on `portal_ml_5chambers`** (`-textmode`): **7/7 PASS** Phase 1 scripted (`13/35/22/11/49/39/45` steps) and **7/7 PASS** Phase 2B neural `MoveTo(83w) + Aim(44w)` (`13/59/21/20/72/61/86` steps).
 
+### Milestone 6 — Layer-4 Event-Driven Strategic Memory & Subgoal Planner (Done, 2026-11-27)
+- Extended `WorkingMemory` (`portal_ml/schema/blackboard.py`) and `resolve_entity` / `cube_on_button` (`portal_ml/bt/predicates.py`) with optional Layer-4 `role_overrides` (supporting both live entity bindings and explicit `None` role masks, while staying 100% bit-for-bit identical in 3-layer mode).
+- Extended `MockPortalEnv` / `ChamberSpec` with `FizzlerBarrier` (`trigger_portal_cleanser` carried-cube vaporization emitting `cube_fizzled:<id>`) and `require_all_buttons` multi-button door logic, keeping `CHAMBERS[1..7]` and `HELD_OUT_CHAMBERS` completely untouched.
+- Built zero-dependency `portal_ml/planner/` package: bounded deduplicated `EpisodicMemory(max_entries=8)`, `StrategicDirective.validate_against_snapshot()`, dynamic `build_directive_json_schema()`, compact `build_symbolic_digest()`, `NullStrategicPlanner`, `RuleBasedStrategicPlanner`, `OpenAICompatibleLLMPlanner` (LM Studio / Ollama / `llama-server` with `<think>...</think>` stripping, HTTP 400 retry, and timeout fallback), `FourLayerAgent`, and 3 multi-stage benchmark chambers (`M1: Dual-Button Relay`, `M2: Fizzler-Gated Decoy Cube`, `M3: Three-Stage Compound Vault`).
+- Wired `--planner {none,rule,llm}` into `scripts/replay_live.py` and built `scripts/ablate_layer4.py`.
+- **Verified controlled 3-layer vs 4-layer ablation (deterministic + live local LLMs via LM Studio, 2026-11-27) under frozen `champions/seed7_decoupled.bt` (24 nodes, zero retraining):**
+  - **Rule baseline (`records/ablation_layer4_2026-11-27.json`):** 3-layer `7/7` standard + `0/3` multi-stage vs 4-layer (`rule`) **`7/7` standard + `3/3` multi-stage** (scripted: `69/66/94` steps; Phase 2B neural: `87/82/149` steps; `3/3/4` calls; 0 fallbacks/warnings).
+  - **Live `phi-4-mini-instruct` (3.8B, 2.49 GB, `records/ablation_layer4_phi4mini_2026-11-27.json`):** **`7/7` standard + `3/3` multi-stage** on BOTH Phase 1 scripted (`116/66/91` steps, 23 total calls, avg 470 ms/call) AND Phase 2B neural (`81/82/152` steps, 22 total calls, avg 461 ms/call) — **20/20 zero-shot PASS**, 0 fallbacks, 0 warnings.
+  - **Live `liquid/lfm2.5-1.2b` (1.2B, 1.25 GB, `records/ablation_layer4_lfm25_2026-11-27.json`):** **`7/7` standard + `1/3` multi-stage** on both scripted (`M2` PASS 42 steps / 2 calls; avg 368 ms/call) and Phase 2B neural (`M2` PASS 65 steps / 2 calls; avg 332 ms/call), 0 fallbacks/warnings — ~28% faster at half the VRAM, exposing a clean Stage-2 multi-button switching ceiling on M1/M3 for LoRA distillation.
+- Verified `OpenAICompatibleLLMPlanner` end-to-end against an in-process loopback OpenAI HTTP server (including `<think>` stripping, dynamic `json_schema` verification, HTTP 400 fallback, and unreachable-server fallback) in `tests/test_layer4_planner.py`.
+
 ---
 
 ## Upcoming Milestones (Worked One at a Time)
 
-### Milestone 6 — Layer-4 Small-LLM Strategic Memory & Subgoal Planner
-- Implement the event-driven `StrategicPlanner` protocol (`docs/FOUR_LAYER_ARCHITECTURE.md`) with grammar-constrained JSON output and rolling episodic memory.
-- Run controlled 3-layer vs 4-layer ablations on multi-room campaign maps (`testchmb_a_02`, `testchmb_a_05`) and harden real-map cube handling (native `+use` pickup/drop).
+### Milestone 7 — Multi-Room Live Campaign Maps, Native `+use` Motor Hardening & Small-Model LoRA Distillation
+- Run live 4-layer (`phi-4-mini-instruct` / `rule`) ablations on multi-room Valve campaign maps (`testchmb_a_02` Rooms 1–2, `testchmb_a_05`).
+- Replace `point_teleport` cube drops with native `+use` / `CPlayerPickupController` carry-and-drop in `source_plugin/src/motor_controller.cpp` for ~100% live drop repeatability.
+- Build JSONL trace distillation dataset (`records/*.jsonl` -> `(symbolic_digest, semantic_action)`) and LoRA-finetune `LFM2.5-1.2B` to close its M1/M3 Stage-2 switching gap (targeting 10/10 at ~300 ms / 1.25 GB).

@@ -21,6 +21,13 @@ from portal_ml.bt.evaluator import BehaviorTreeEvaluator
 from portal_ml.bt.reference_trees import get_reference_tree
 from portal_ml.motor.hybrid import HybridMotorController
 from portal_ml.motor.neural import NeuralAimPolicy, NeuralMoveToPolicy
+from portal_ml.planner import (
+    FourLayerAgent,
+    NullStrategicPlanner,
+    OpenAICompatibleLLMPlanner,
+    RuleBasedStrategicPlanner,
+    StrategicPlanner,
+)
 from portal_ml.sim.mock_env import MockPortalEnv, PortalEnv
 
 
@@ -43,6 +50,23 @@ def main() -> int:
     parser.add_argument("--trace-out", default="", help="Optional JSONL file to record tick traces")
     parser.add_argument("--neural-moveto", default="", help="Optional Phase-2 MoveTo MLP JSON checkpoint")
     parser.add_argument("--neural-aim", default="", help="Optional Phase-2 ShootPortal Aim MLP JSON checkpoint")
+    parser.add_argument(
+        "--planner",
+        choices=["none", "rule", "llm"],
+        default="none",
+        help="Layer-4 strategic planner mode (none=3-layer, rule=symbolic, llm=OpenAI-compatible endpoint)",
+    )
+    parser.add_argument(
+        "--llm-url",
+        default="http://127.0.0.1:1234/v1/chat/completions",
+        help="OpenAI-compatible chat completions URL (LM Studio default: port 1234)",
+    )
+    parser.add_argument(
+        "--llm-model",
+        default="phi-4-mini-instruct",
+        help="Model identifier served by LM Studio / Ollama / llama-server",
+    )
+    parser.add_argument("--llm-timeout", type=float, default=8.0, help="Layer-4 LLM HTTP timeout in seconds")
     args = parser.parse_args()
 
     tree, label = load_tree(args.bt)
@@ -55,7 +79,11 @@ def main() -> int:
     if aim_pol is not None:
         motor_desc.append(f"neural_aim({len(aim_pol.net.weights)}w)")
     motor_str = "+".join(motor_desc) if motor_desc else "scripted"
-    print(f"Replaying BT: {label} (nodes={tree.size()}) on backend={args.backend} motor={motor_str}")
+    planner_desc = args.planner if args.planner != "llm" else f"llm:{args.llm_model}"
+    print(
+        f"Replaying BT: {label} (nodes={tree.size()}) on backend={args.backend} "
+        f"motor={motor_str} planner={planner_desc}"
+    )
 
     trace_fp = None
     if args.trace_out:
@@ -98,25 +126,37 @@ def main() -> int:
                 interact_radius=interact_r,
                 allow_orange_portal=allow_orange,
             )
+            planner: StrategicPlanner
+            if args.planner == "rule":
+                planner = RuleBasedStrategicPlanner()
+            elif args.planner == "llm":
+                planner = OpenAICompatibleLLMPlanner(
+                    base_url=args.llm_url,
+                    model=args.llm_model,
+                    timeout_s=args.llm_timeout,
+                )
+            else:
+                planner = NullStrategicPlanner()
+            agent = FourLayerAgent(ev, planner=planner, hybrid_motor=hybrid)
+
             t0 = time.perf_counter()
             snap = env.reset(cid)
             reset_ms = (time.perf_counter() - t0) * 1000.0
+            agent.reset(snap)
 
             ep_start = time.perf_counter()
             steps = 0
             ep_reward = 0.0
             ep_milestones: list[str] = []
-            last_cmd_str = "none"
+            last_milestones: list[str] = []
             while not snap.done and steps < args.max_steps:
-                tick_res = ev.tick(snap)
-                sym_cmd = tick_res.command
-                cmd = hybrid.lower(snap, sym_cmd)
-                last_cmd_str = f"{cmd.kind.value}({cmd.to_dict()})"
+                cmd, tick_res = agent.act(snap, last_milestones)
                 step_res = env.step(cmd)
                 snap = step_res.snapshot
                 ep_reward += step_res.reward
-                if step_res.milestones:
-                    ep_milestones.extend(step_res.milestones)
+                last_milestones = list(step_res.milestones)
+                if last_milestones:
+                    ep_milestones.extend(last_milestones)
                 steps += 1
 
                 if trace_fp is not None:
@@ -126,6 +166,11 @@ def main() -> int:
                                 "chamber_id": cid,
                                 "step": steps,
                                 "target": tick_res.target_role,
+                                "subgoal": (
+                                    agent.current_directive.subgoal
+                                    if agent.current_directive is not None
+                                    else None
+                                ),
                                 "command": cmd.to_dict(),
                                 "player": snap.player.to_dict(),
                                 "entities": [e.to_dict() for e in snap.entities],
@@ -156,9 +201,14 @@ def main() -> int:
             status = "PASS" if snap.success else "FAIL"
             if snap.success:
                 passed_count += 1
+            l4_info = (
+                f" | l4_calls={agent.planner_calls}({agent.total_planner_ms:.1f}ms)"
+                if args.planner != "none"
+                else ""
+            )
             print(
                 f"  Chamber {cid}: {status:4s} | reset={reset_ms:6.2f}ms | steps={steps:3d} "
-                f"| elapsed={ep_sec:5.2f}s | reward={ep_reward:6.2f} | ms={ep_milestones} "
+                f"| elapsed={ep_sec:5.2f}s | reward={ep_reward:6.2f}{l4_info} | ms={ep_milestones} "
                 f"| final_pos={[round(v,1) for v in snap.player.pos.to_list()]} z={snap.player.zone_id}"
             )
     finally:

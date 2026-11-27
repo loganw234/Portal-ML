@@ -202,14 +202,23 @@ class ActivePortal:
 
 @dataclass(slots=True)
 class WorkingMemory:
-    """Mutable per-episode Blackboard scratchpad owned by the reasoning layer."""
+    """Mutable per-episode Blackboard scratchpad owned by the reasoning layer.
+
+    ``role_overrides`` is written optionally by Layer 4 (Strategic Planner) to
+    bind symbolic roles (``cube``, ``floor_button``, ``pedestal_button``, ``exit``)
+    to specific entity IDs — or to ``None`` to temporarily mask a secondary role
+    during the current subgoal. When empty (3-layer mode), resolution is
+    100% identical to ``snapshot.first_of_kind(kind)``.
+    """
 
     target_role: str | None = None
     target_entity_id: str | None = None
+    role_overrides: dict[str, str | None] = field(default_factory=dict)
 
     def clear(self) -> None:
         self.target_role = None
         self.target_entity_id = None
+        self.role_overrides.clear()
 
 
 @dataclass(slots=True)

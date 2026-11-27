@@ -88,9 +88,12 @@ class MockPortalEnv:
     def spec(self) -> ChamberSpec:
         return self._spec
 
-    def reset(self, chamber_id: int) -> BlackboardSnapshot:
-        """Sub-millisecond in-place reset to any of Chambers 1-5."""
-        self._spec = get_chamber(chamber_id)
+    def reset(
+        self, chamber_id: int = 1, *, spec: ChamberSpec | None = None
+    ) -> BlackboardSnapshot:
+        """Sub-millisecond in-place reset to any chamber spec."""
+        self._spec = spec if spec is not None else get_chamber(chamber_id)
+        self._spawn_by_id = {s.id: s for s in self._spec.entities}
         self._tick = 0
         self._done = False
         self._success = False
@@ -211,6 +214,8 @@ class MockPortalEnv:
         reward = -0.05  # step penalty encourages concise, efficient plans
 
         # 1. Execute motor primitive
+        prev_pos = self._player.pos
+        prev_zone = self._player.zone_id
         self._player.vel = Vec3(0.0, 0.0, 0.0)
         if isinstance(command, MoveTo):
             self._exec_move_to(command.entity_id, step_milestones)
@@ -226,6 +231,10 @@ class MockPortalEnv:
             self._exec_press(command.entity_id, step_milestones)
         elif isinstance(command, ShootPortal):
             self._exec_shoot_portal(command.color, command.wall_id, step_milestones)
+
+        # 1b. Check fizzler barriers (trigger_portal_cleanser) if carrying a cube
+        if self._spec.fizzlers and self._player.held_entity_id is not None:
+            self._check_fizzler_crossing(prev_pos, prev_zone, step_milestones)
 
         # 2. Keep held cube attached in front of player
         self._update_held_cube()
@@ -499,6 +508,44 @@ class MockPortalEnv:
 
     # --- World physics / trigger updates ---
 
+    def _check_fizzler_crossing(
+        self, prev_pos: Vec3, prev_zone: int, milestones: list[str]
+    ) -> None:
+        held_id = self._player.held_entity_id
+        if held_id is None or self._player.zone_id != prev_zone:
+            return
+        cur_pos = self._player.pos
+        for fz in self._spec.fizzlers:
+            if fz.zone_id != prev_zone:
+                continue
+            crossed = False
+            if fz.axis == "x":
+                span_mid = 0.5 * (prev_pos.y + cur_pos.y)
+                if fz.min_span <= span_mid <= fz.max_span:
+                    if (prev_pos.x - fz.coord) * (cur_pos.x - fz.coord) <= 0.0 and (
+                        prev_pos.x != cur_pos.x
+                    ):
+                        crossed = True
+            elif fz.axis == "y":
+                span_mid = 0.5 * (prev_pos.x + cur_pos.x)
+                if fz.min_span <= span_mid <= fz.max_span:
+                    if (prev_pos.y - fz.coord) * (cur_pos.y - fz.coord) <= 0.0 and (
+                        prev_pos.y != cur_pos.y
+                    ):
+                        crossed = True
+            if crossed:
+                cube = self._entities.get(held_id)
+                spawn = self._spawn_by_id.get(held_id)
+                if cube is not None and spawn is not None:
+                    cube.held = False
+                    cube.pos = spawn.pos
+                    cube.zone_id = spawn.zone_id
+                    cube.active = False
+                self._player.held_entity_id = None
+                # Fizzler always emits event (even on repeated attempts) so Layer 4 sees it
+                milestones.append(f"cube_fizzled:{held_id}")
+                return
+
     def _update_held_cube(self) -> None:
         held_id = self._player.held_entity_id
         if held_id is None:
@@ -528,14 +575,18 @@ class MockPortalEnv:
                 if ent.active:
                     pedestal_active = True
 
-        # 2. Check weighted floor buttons against loose cubes (or player standing on it)
-        floor_btn_active = False
+        # 2. Check weighted floor buttons against loose cubes
+        floor_buttons: list[EntityState] = []
+        pedestals: list[EntityState] = []
         cubes = [e for e in self._entities.values() if e.kind is EntityKind.CUBE]
         for c in cubes:
             c.active = False
 
         for ent in self._entities.values():
-            if ent.kind is EntityKind.FLOOR_BUTTON:
+            if ent.kind is EntityKind.PEDESTAL_BUTTON:
+                pedestals.append(ent)
+            elif ent.kind is EntityKind.FLOOR_BUTTON:
+                floor_buttons.append(ent)
                 pressed_by_cube = False
                 for c in cubes:
                     if (
@@ -547,7 +598,6 @@ class MockPortalEnv:
                         c.active = True
                 ent.active = pressed_by_cube
                 if ent.active:
-                    floor_btn_active = True
                     self._record_milestone("button_pressed", milestones)
 
         # 3. Update exit door open state
@@ -555,8 +605,13 @@ class MockPortalEnv:
         if exit_ent is not None:
             if self._spec.exit_starts_open:
                 exit_ent.active = True
+            elif self._spec.require_all_buttons:
+                all_floor = all(b.active for b in floor_buttons) if floor_buttons else True
+                all_ped = all(p.active for p in pedestals) if pedestals else True
+                exit_ent.active = (bool(floor_buttons) or bool(pedestals)) and all_floor and all_ped
             else:
-                exit_ent.active = pedestal_active or floor_btn_active
+                any_floor = any(b.active for b in floor_buttons)
+                exit_ent.active = pedestal_active or any_floor
 
     def _record_milestone(self, name: str, step_milestones: list[str]) -> None:
         if name not in self._achieved_milestones:

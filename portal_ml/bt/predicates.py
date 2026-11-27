@@ -34,6 +34,13 @@ def resolve_entity(
         return snapshot.entity_by_id(memory.target_entity_id)
     kind = ROLE_TO_KIND.get(ref)
     if kind is not None:
+        if ref in memory.role_overrides:
+            override_id = memory.role_overrides[ref]
+            if override_id is None:
+                return None
+            ent = snapshot.entity_by_id(override_id)
+            if ent is not None and ent.kind is kind:
+                return ent
         return snapshot.first_of_kind(kind)
     return snapshot.entity_by_id(ref)
 
@@ -146,7 +153,17 @@ def evaluate_predicate(
         return portal.active and portal.zone_id == zone_id
 
     if predicate == "cube_on_button":
-        cube = snapshot.first_of_kind(EntityKind.CUBE)
-        return cube is not None and cube.active
+        cube = resolve_entity(snapshot, memory, "cube")
+        if cube is None or not cube.active:
+            return False
+        if "floor_button" in memory.role_overrides and memory.role_overrides["floor_button"] is not None:
+            btn = resolve_entity(snapshot, memory, "floor_button")
+            if btn is None or not btn.active:
+                return False
+            return (
+                cube.zone_id == btn.zone_id
+                and cube.pos.distance_xy(btn.pos) <= 52.0
+            )
+        return True
 
     return False
