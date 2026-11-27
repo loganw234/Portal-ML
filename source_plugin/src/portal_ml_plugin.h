@@ -47,6 +47,8 @@ private:
     bool awaiting_post_reset_ = false;
     int step_start_zone_ = 0;
     std::string pending_drop_cube_;
+    bool pending_drop_multi_btn_ = false;
+    int multi_btn_drops_done_ = 0;
     Vec3 pending_drop_target_{};
     MotorCommand active_cmd_{};
     std::set<std::string> achieved_milestones_;

@@ -97,12 +97,24 @@ void PortalMLPlugin::ResetChamberInPlace(int chamber_id) {
     awaiting_post_step_ = false;
     awaiting_post_reset_ = false;
     pending_drop_cube_.clear();
+    pending_drop_multi_btn_ = false;
+    multi_btn_drops_done_ = 0;
     active_cmd_ = MotorCommand{};
     achieved_milestones_.clear();
     extractor_.OnResetChamber(chamber_id);
     extractor_.SetPlayerVelocityXY(0.0f, 0.0f, true);
 
     if (extractor_.IsGenericMode()) {
+        if (chamber_id >= 2 &&
+            static_cast<size_t>(chamber_id) <= bsp_map_.room_spawns.size()) {
+            const auto& sp = bsp_map_.room_spawns[static_cast<size_t>(chamber_id - 1)];
+            std::ostringstream ss;
+            ss << "ent_fire !player AddOutput \"basevelocity 0 0 0\"; "
+               << "give weapon_portalgun; "
+               << "setpos " << sp.pos.x << ' ' << sp.pos.y << ' ' << (sp.pos.z + 4.0f)
+               << "; setang 0 " << sp.yaw << " 0\n";
+            SendServerCmd(ss.str(), false);
+        }
         return;
     }
 
@@ -189,7 +201,33 @@ void PortalMLPlugin::GameFrame(bool simulating) {
         }
         if (awaiting_post_step_ && active_cmd_.kind == MotorCmdKind::kDrop &&
             !pending_drop_cube_.empty()) {
-            if (extractor_.IsGenericMode() && pending_subticks_ == 20) {
+            // Map synthetic multi-cube IDs ("box_2_0" -> "box_2") back to the real BSP targetname
+            std::string wire_cube = pending_drop_cube_;
+            if (extractor_.IsGenericMode() && pending_drop_multi_btn_) {
+                const auto us = wire_cube.rfind('_');
+                if (us != std::string::npos && us + 1 < wire_cube.size()) {
+                    bool all_digits = true;
+                    for (size_t k = us + 1; k < wire_cube.size(); ++k) {
+                        if (wire_cube[k] < '0' || wire_cube[k] > '9') {
+                            all_digits = false;
+                            break;
+                        }
+                    }
+                    if (all_digits) {
+                        wire_cube = wire_cube.substr(0, us);
+                    }
+                }
+            }
+            if (extractor_.IsGenericMode() && pending_subticks_ == 24 &&
+                pending_drop_multi_btn_ && multi_btn_drops_done_ > 0) {
+                // Previous button's cube was renamed to portal_ml_pinned_*; spawn a fresh
+                // matching cube with the map's required filter targetname so dropping on
+                // button #2 never yanks button #1's cube off its pad.
+                std::ostringstream ss;
+                ss << "ent_create prop_physics model \"models/props/metal_box.mdl\" targetname \""
+                   << wire_cube << "\"\n";
+                SendServerCmd(ss.str(), false);
+            } else if (extractor_.IsGenericMode() && pending_subticks_ == 20) {
                 // Step 1 (after ~0.51s off button so Valve's player-trigger finishes
                 // OnEndTouchAll + floor_button_door_* finishes rising): configure
                 // point_teleport 28u above tgt_z and wake VPhysics while STILL solid=0.
@@ -198,31 +236,39 @@ void PortalMLPlugin::GameFrame(bool simulating) {
                    << "ent_fire point_teleport AddOutput \"origin "
                    << pending_drop_target_.x << ' ' << pending_drop_target_.y << ' '
                    << (pending_drop_target_.z + 28.0f) << "\"; "
-                   << "ent_fire point_teleport AddOutput \"target " << pending_drop_cube_ << "\"; "
-                   << "ent_fire " << pending_drop_cube_ << " EnableMotion\n";
+                   << "ent_fire point_teleport AddOutput \"target " << wire_cube << "\"; "
+                   << "ent_fire " << wire_cube << " EnableMotion\n";
                 SendServerCmd(ss.str(), false);
             } else if (extractor_.IsGenericMode() && pending_subticks_ == 18) {
                 // Step 2: Teleport while STILL solid=0 to dead-center above button pad.
                 SendServerCmd("ent_fire point_teleport Teleport\n", false);
             } else if (extractor_.IsGenericMode() && pending_subticks_ == 17) {
                 // Step 3: freeze dead-center above the pad to zero linear/angular velocity.
-                SendServerCmd("ent_fire " + pending_drop_cube_ + " DisableMotion\n", false);
+                SendServerCmd("ent_fire " + wire_cube + " DisableMotion\n", false);
             } else if (extractor_.IsGenericMode() && pending_subticks_ == 16) {
                 // Step 4: restore SOLID_VPHYSICS on a distinct tick while DisableMotion is active.
-                SendServerCmd("ent_fire " + pending_drop_cube_ + " AddOutput \"solid 6\"\n", false);
+                SendServerCmd("ent_fire " + wire_cube + " AddOutput \"solid 6\"\n", false);
             } else if (extractor_.IsGenericMode() && pending_subticks_ == 15) {
                 // Step 5: re-enable VPhysics + Wake so Valve's floor_button_trigger_box_*
                 // registers OnStartTouch and opens floor_button_door_* / exit door.
                 std::ostringstream ss;
-                ss << "ent_fire " << pending_drop_cube_ << " EnableMotion; "
-                   << "ent_fire " << pending_drop_cube_ << " Wake \"\" 0.01; "
+                ss << "ent_fire " << wire_cube << " EnableMotion; "
+                   << "ent_fire " << wire_cube << " Wake \"\" 0.01; "
                    << "ent_fire point_teleport Kill \"\" 0.04\n";
                 SendServerCmd(ss.str(), false);
             } else if (extractor_.IsGenericMode() && pending_subticks_ == 12) {
                 // Step 6: pin cube in place on the button pad after 3 physics ticks (~0.045s)
                 // once Valve's trigger has fired, preventing duplicate dropper cubes sharing
                 // targetname ("box") from blasting each other off the button rim.
-                SendServerCmd("ent_fire " + pending_drop_cube_ + " DisableMotion\n", false);
+                std::ostringstream ss;
+                ss << "ent_fire " << wire_cube << " DisableMotion";
+                if (pending_drop_multi_btn_) {
+                    ss << "; ent_fire " << wire_cube << " AddOutput \"targetname portal_ml_pinned_"
+                       << multi_btn_drops_done_ << "\" 0.02";
+                    ++multi_btn_drops_done_;
+                }
+                ss << "\n";
+                SendServerCmd(ss.str(), false);
                 extractor_.SetPlayerVelocityXY(0.0f, 0.0f, true);
                 extractor_.NotifyHoldState("");
                 pending_drop_cube_.clear();
@@ -332,6 +378,11 @@ void PortalMLPlugin::GameFrame(bool simulating) {
         active_cmd_ = MotorController::ParseCommandJson(req);
         if (active_cmd_.kind == MotorCmdKind::kDrop) {
             pending_drop_cube_ = pre_state.held_entity_id;
+            int fb_count = 0;
+            for (const auto& e : pre_state.entities) {
+                if (e.kind == "floor_button") ++fb_count;
+            }
+            pending_drop_multi_btn_ = (fb_count >= 2);
             pending_drop_target_ = {
                 pre_state.player_pos.x + std::cos(pre_state.player_yaw * (3.14159265f / 180.0f)) * 48.0f,
                 pre_state.player_pos.y + std::sin(pre_state.player_yaw * (3.14159265f / 180.0f)) * 48.0f,

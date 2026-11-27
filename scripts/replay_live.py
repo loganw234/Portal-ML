@@ -129,7 +129,8 @@ def main() -> int:
         info = source_env.map_info()
         if info.get("generic_mode", False):
             allow_orange = bool(info.get("can_fire_orange", True))
-            chambers_to_run = [0]
+            if args.chambers == [1, 2, 3, 4, 5]:
+                chambers_to_run = [0]
             print(
                 f"Generic campaign map detected: {info.get('map_name')} "
                 f"(entities={info.get('discovered_entities')}, "

@@ -326,11 +326,27 @@ void MotorController::Execute(
         extractor.SetPlayerVelocityXY(0.0f, 0.0f);
         std::ostringstream ss;
         ss << "setang 0 " << yaw << " 0; "
-           << "ent_fire !player AddOutput \"basevelocity 0 0 0\"; "
-           << "ent_fire " << cmd.entity_id << " DisableMotion; "
-           << "ent_fire " << cmd.entity_id << " AddOutput \"solid 0\"; "
-           << "ent_fire " << cmd.entity_id << " AddOutput \"origin "
-           << cx << ' ' << cy << ' ' << cz << "\"\n";
+           << "ent_fire !player AddOutput \"basevelocity 0 0 0\"; ";
+        if (!extractor.IsGenericMode()) {
+            ss << "ent_fire " << cmd.entity_id << " DisableMotion; "
+               << "ent_fire " << cmd.entity_id << " AddOutput \"solid 0\"; "
+               << "ent_fire " << cmd.entity_id << " AddOutput \"origin "
+               << cx << ' ' << cy << ' ' << cz << "\"";
+        } else {
+            // In multi-button generic rooms, avoid disturbing an already-pinned cube sharing
+            // the same targetname; only carry overhead when a single cube is in the room.
+            int cube_count = 0;
+            for (const auto& e : state.entities) {
+                if (e.kind == "cube") ++cube_count;
+            }
+            if (cube_count <= 1) {
+                ss << "ent_fire " << cmd.entity_id << " DisableMotion; "
+                   << "ent_fire " << cmd.entity_id << " AddOutput \"solid 0\"; "
+                   << "ent_fire " << cmd.entity_id << " AddOutput \"origin "
+                   << cx << ' ' << cy << ' ' << cz << "\"";
+            }
+        }
+        ss << "\n";
         IssueCmd(ss.str());
         extractor.NotifyHoldState(cmd.entity_id);
         return;
@@ -362,12 +378,10 @@ void MotorController::Execute(
             float bx = -1.0f;
             float by = 0.0f;
             if (extractor.IsGenericMode()) {
-                // Step back toward map spawn (guaranteed open room space, avoiding cube overlap)
-                const auto* gmap = extractor.GetGenericMap();
-                if (gmap) {
-                    bx = gmap->player_spawn.x - tgt_x;
-                    by = gmap->player_spawn.y - tgt_y;
-                }
+                // Step back toward active room spawn (guaranteed open room space)
+                const Vec3 sp = extractor.ActiveRoomSpawn();
+                bx = sp.x - tgt_x;
+                by = sp.y - tgt_y;
             } else {
                 const auto& layout = GetChamberLayout(state.chamber_id);
                 bx = layout.exit_pos.x - tgt_x;

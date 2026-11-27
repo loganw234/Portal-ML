@@ -116,10 +116,23 @@ Started 2026-11-26. Objective: prove a decoupled 3-layer neuroevolutionary reaso
   - Cleared unmodified Valve `testchmb_a_02` Room 1 end-to-end live in Portal 1 with live `phi-4-mini-instruct @ 4k` (LM Studio) + frozen `seed7_decoupled.bt` in **`149` steps (`16.88s`, `reward=172.55`, `2` live LLM calls / `1.58s`)** (`records/live_testchmb_a02_4layer_phi4mini_2026-11-27.jsonl`; refreshed `docs/images/live_testchmb_a02_solve.svg`).
   - Re-verified **zero regression on live `portal_ml_5chambers`**: **7/7 PASS** (`13/59/21/21/70/60/87` steps) with Multi-Skill Auto MLPs (`83w+208w+44w`).
 
+### Milestone 10 — GGUF Export of 20/20 `LFM2.5-1.2B` to LM Studio, Live Student Sweeps & Multi-Story Campaign Infrastructure (Done, 2026-11-27)
+- **Quantized & deployed our 20/20 fine-tuned `LFM2.5-1.2B` student to LM Studio (`scripts/export_lfm25_gguf.py`):**
+  - Exported `champions/lfm25_layer4_lora/merged` (`Lfm2ForCausalLM`, `bf16`) to a **`1.24 GB` `Q8_0` GGUF** and imported/loaded it in LM Studio as `lfm25-1.2b-layer4` (`1.16 GiB` VRAM at `4096` context, loaded in `4.10s`).
+  - **Controlled 20-episode LM Studio ablation (`records/ablation_layer4_lfm25_gguf_2026-11-27.json`):** preserved **`20/20` PASS bit-for-bit** (`7/7` std + `3/3` M1–M3 on BOTH Phase 1 scripted `62/66/78` steps @ **`285.8 ms/call`** and Phase 2B neural `81/82/113` steps @ **`259.7 ms/call`**, `22` theoretical-minimum calls, `0` fallbacks, `0` warnings) — **~1.8× faster than `Phi-4-mini @ 4k` (`466–481 ms`) at less than half the VRAM (`1.16 GiB` vs `2.49 GB`), while outperforming both `Rule` and `Phi-4-mini` on M3 by 16–36 steps!**
+  - **First-ever live Portal 1 4-layer sweeps powered by our `1.16 GiB` fine-tuned student:**
+    - `portal_ml_5chambers` (**7/7 PASS** live with Multi-Skill Auto MLPs `83w+208w+44w`: `13/59/21/21/70/60/87` steps, `13` calls in **`4.15s` / `319 ms/call`** vs `Phi-4-mini @ 4k`'s `6.43s` — **35% faster live**; `records/live_7ch_4layer_lfm25_lora_2026-11-27.jsonl`).
+    - Unmodified Valve `testchmb_a_02` Room 1 (**PASS** live in **`149` steps**, `16.69s`, `reward=172.55`, `2` calls in **`850.4 ms`** vs `Phi-4-mini @ 4k`'s `1,583 ms` — **46% faster live**; `records/live_testchmb_a02_4layer_lfm25_lora_2026-11-27.jsonl`).
+- **Multi-story campaign discovery & honest campaign-navigation diagnosis (`source_plugin/src/bsp_scanner.{h,cpp}`, `blackboard_extractor.{h,cpp}`, `portal_ml_plugin.{h,cpp}`, `motor_controller.cpp`, `scripts/replay_live.py`):**
+  - Extended `BspScanner` to collect sorted multi-story `room_spawns`, `BlackboardExtractor` with dynamic story elevation (`active_room_base_z_`), story-centroid multi-cube discovery (`box_2_0`, `box_2_1`), Zone-2 balcony wall extraction, and per-button activation in multi-button rooms, plus multi-button pinned cube isolation in `PortalMLPlugin`.
+  - **Live multi-room & campaign probes with `lfm25-1.2b-layer4`:**
+    - On unmodified Valve `testchmb_a_02` Room 2 (`Test Chamber 05`, 2 buttons, 2 cubes), cleanly discovered all 5 Room-2 entities (`buttona_top_a02_2`, `buttonb_top_a02_2`, `exit_door_left_a02_2`, `box_2_0`, `box_2_1`); `lfm25-1.2b-layer4` recovered from the initial Zone-2 stall in 1 call (`444ms`), navigated down the corridor, and triggered Valve's fixed Orange portal (`portal_a1_rm3a`) before hitting a greedy-Euclidean local minimum in the L-shaped entry corridor (`(560, 380)` is closer in straight-line distance to `(953, 778)` than the open north doorway `(400, 480)`).
+    - On unmodified Valve `testchmb_a_05` (`Test Chamber 09`), zero-shot walked across the chamber and grabbed `box` (`t=85`), then hit the same-elevation fizzler/glass barrier (`trigger_fryer_rm5-a`, `y=142`) separating `box` from `buttona_top_a02_2` (`y=291`).
+
 ---
 
 ## Upcoming Milestones (Worked One at a Time)
 
-### Milestone 10 — GGUF Export of Tuned `LFM2.5-1.2B` to LM Studio & Multi-Room Campaign Progression
-- Quantize `champions/lfm25_layer4_lora/merged` to GGUF (`Q8_0` / `Q4_K_M`) for LM Studio and run the first live Portal 1 4-layer sweep (`portal_ml_5chambers` 7/7 + `testchmb_a_02`) powered by our fine-tuned `LFM2.5-1.2B` student at ~330 ms/call and 1.25 GB VRAM.
-- Extend generic campaign `ExtractGeneric` room-band progression across multi-room Valve maps (`testchmb_a_02` Rooms 1–2 via the middle elevator, `testchmb_a_05`, and `testchmb_a_06` energy-pellet / hazard rooms).
+### Milestone 11 — BSP/Navmesh 2D/3D Waypoint Pathfinder (`A*`) & Horizontal Fizzler Zone Splitting
+- Build a general C++ `IEngineTrace`-validated 2D/3D occupancy grid + `A*` waypoint follower inside Layer 3 (`MotorController`) so greedy local minima in multi-bend Valve corridors (`testchmb_a_02` Room 2 L-corridor, `testchmb_a_00`, `a_01`) are solved cleanly with zero map-specific hardcoding.
+- Add horizontal fizzler (`trigger_portal_cleanser`) zone splitting in `BlackboardExtractor::ExtractGeneric` and verify live 4-layer solves on unmodified Valve `testchmb_a_02` Room 2 (2-button Test Chamber 05) and `testchmb_a_05` (Test Chamber 09).

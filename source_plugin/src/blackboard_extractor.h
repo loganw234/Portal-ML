@@ -124,6 +124,8 @@ public:
     void SetGenericMap(const BspMapData* map_data);
     bool IsGenericMode() const { return generic_map_ != nullptr; }
     const BspMapData* GetGenericMap() const { return generic_map_; }
+    Vec3 ActiveRoomSpawn() const { return active_room_spawn_; }
+    float ActiveRoomBaseZ() const { return active_room_base_z_; }
     void OnResetChamber(int chamber_id);
     void NotifyPortalPlaced(const std::string& color, const std::string& wall_id);
     void NotifyPortalPlacedWall(const std::string& color, const PortalWallRecord& wall);
@@ -147,6 +149,9 @@ private:
     void* server_game_dll_ = nullptr;
     void* engine_trace_ = nullptr;
     const BspMapData* generic_map_ = nullptr;
+    Vec3 active_room_spawn_{};
+    float active_room_base_z_ = 0.0f;
+    float active_room_yaw_ = 0.0f;
 
     Vec3 prev_player_pos_{};
     bool has_prev_pos_ = false;

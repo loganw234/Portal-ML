@@ -171,13 +171,18 @@ void ParseEntitiesLump(const char* data, size_t len, const DModel* models, size_
         const std::string low_tname = ToLower(tname);
         const Vec3 org = kv.count("origin") ? ParseVec3(kv["origin"]) : Vec3{};
 
-        if (cls == "info_player_start" && !has_spawn) {
-            out.player_spawn = org;
+        if (cls == "info_player_start") {
+            float syaw = 0.0f;
             if (kv.count("angles")) {
                 const Vec3 ang = ParseVec3(kv["angles"]);
-                out.player_spawn_yaw = ang.y;
+                syaw = ang.y;
             }
-            has_spawn = true;
+            out.room_spawns.push_back({org, syaw});
+            if (!has_spawn) {
+                out.player_spawn = org;
+                out.player_spawn_yaw = syaw;
+                has_spawn = true;
+            }
         } else if (cls == "weapon_portalgun" && !saw_portalgun) {
             saw_portalgun = true;
             if (kv.count("CanFirePortal1")) {
@@ -269,6 +274,10 @@ bool BspScanner::LoadFromFile(const std::string& bsp_path, const std::string& ma
             models_ptr,
             n_models,
             out);
+        std::sort(
+            out.room_spawns.begin(),
+            out.room_spawns.end(),
+            [](const SpawnPoint& a, const SpawnPoint& b) { return a.pos.z < b.pos.z; });
     }
 
     if (!valid_lump(kLumpPlanes) || !valid_lump(kLumpTexData) || !valid_lump(kLumpVertexes) ||

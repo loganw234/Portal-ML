@@ -23,6 +23,11 @@ struct HazardRecord {
     float dps = 100.0f;
 };
 
+struct SpawnPoint {
+    Vec3 pos{};
+    float yaw = 0.0f;
+};
+
 struct BspMapData {
     std::string map_name;
     bool loaded = false;
@@ -31,6 +36,7 @@ struct BspMapData {
     bool can_fire_orange = true;
     Vec3 player_spawn{};
     float player_spawn_yaw = 0.0f;
+    std::vector<SpawnPoint> room_spawns;
     std::vector<DiscoveredEntity> entities;
     std::vector<PortalWallRecord> portal_surfaces;
     std::vector<HazardRecord> hazards;
