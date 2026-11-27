@@ -1,8 +1,59 @@
 # Portal-ML
 
-A hybrid neuroevolutionary reasoning agent for *Portal* (Source Engine) that decouples **causal reasoning** (evolved as a readable Behavior Tree DSL over a symbolic Blackboard) from **motor execution** (deterministic Phase-1 primitives now, swappable for neuroevolved neural networks in Phase 2).
+A **4-layer decoupled neuroevolutionary reasoning agent** for *Portal 1* (Source Engine) combining:
+1. **Layer 1 (Perception):** Ground-truth symbolic Blackboard + live proprioception + 13-channel `IEngineTrace` non-visual LiDAR + generic BSP v20 scanner.
+2. **Layer 2 (Reactive Reasoning):** Frozen 24-node evolved Behavior Tree DSL (`champions/seed7_decoupled.bt`, trained strictly on mock Chambers 1–4).
+3. **Layer 3 (Motor Control):** 6-DOF `MoveVector` + automatic multi-skill routing across neuroevolved MLPs (`83w` precision + `208w` sensor parkour + `44w` portal aim).
+4. **Layer 4 (Strategic Memory & Planner):** Event-driven `EpisodicMemory` + affordance-gated semantic subgoals powered by deterministic rules, `Phi-4-mini @ 4k`, or our **20/20 LoRA-tuned `1.16 GiB` `LFM2.5-1.2B` (`Q8_0` GGUF, ~260 ms/call)**.
 
-The core claim is architectural: separating *what* subgoal entity to pursue from *how* to reach and interact with `target` lets an agent trained strictly on Chambers 1–4 generalize zero-shot to a held-out rotated puzzle (Chamber 5) that combines cubes, buttons, and portals for the first time.
+The core claim is architectural: separating *strategic sequencing* (Layer 4) and *causal subgoal reasoning* (Layer 2) from *low-level motor skills* (Layer 3) lets a frozen 24-node Behavior Tree trained only on Chambers 1–4 generalize zero-shot to unseen 3-zone chambers, multi-stage puzzles, parkour/acid hazards, and live *Portal 1* (including Valve's unmodified `testchmb_a_02` Room 1).
+
+## Quickstart
+
+### Option A — 2-Minute Simulator & Verification Run (No *Portal 1* Required, Zero Dependencies)
+Requires only **Python 3.11+** (pure stdlib; no `pip install` required):
+
+```powershell
+git clone https://github.com/loganw234/Portal-ML.git
+cd Portal-ML
+
+# 1. Run all 6 verification gates + 5 fault-injection controls + 41 unit/integration tests
+python tools/check.py --control
+
+# 2. Run the 3-layer vs 4-layer ablation (Chambers 1-7 + Multi-Stage M1-M3)
+python scripts/ablate_layer4.py
+
+# 3. Run the 13-chamber parkour & hazard skill ablation (Ch 1-7 + M1-M3 + P1-P3)
+python scripts/ablate_parkour.py
+
+# 4. Render all SVG trajectory comparisons into docs/images/
+python scripts/render_paths.py
+```
+
+### Option B — Live *Portal 1* (Windows + Steam *Portal 1* + Prebuilt `v1.0.0` Release Assets)
+1. Download `portal-ml-v1.0.0-portal1-win32.zip` from the [GitHub `v1.0.0` Release](https://github.com/loganw234/Portal-ML/releases) (contains prebuilt `portal_ml_plugin.dll`, `portal_ml_plugin.vdf`, `portal_ml_5chambers.bsp`, and `install_plugin.ps1`) and run:
+   ```powershell
+   .\install_plugin.ps1
+   ```
+   *(Or build from source following [source_plugin/README.md](source_plugin/README.md).)*
+2. *(Optional, for local LLM Layer 4)* Download `portal-ml-lfm25-1.2b-layer4-Q8_0-gguf.zip` from the same release (governed by the **LFM Open License v1.0**; verbatim license & notice included inside the archive), import `lfm25-1.2b-portal-ml-layer4-Q8_0.gguf` into LM Studio (`lms import` or UI), and start LM Studio's OpenAI server on `127.0.0.1:1234` at `4096` context.
+3. Launch *Portal 1* and run the live 7-chamber sweep (or unmodified Valve `testchmb_a_02`!):
+   ```powershell
+   # Fast headless sweep (or omit -TextMode and pass -nomouse +m_pitch 0 +m_yaw 0 to watch / record POV)
+   .\scripts\launch_portal.ps1 -TextMode
+
+   # Live 7/7 sweep with Multi-Skill Auto MLPs + Layer 4 (use --planner rule if not running LM Studio)
+   python scripts/replay_live.py --backend source --chambers 1 2 3 4 5 6 7 `
+     --neural-moveto champions/moveto_mlp.json `
+     --neural-parkour champions/parkour_mlp.json --skill-mode auto `
+     --neural-aim champions/aim_mlp.json `
+     --planner llm --llm-model lfm25-1.2b-layer4
+
+   # Record a 1280x720 60fps first-person POV video with synced audio (requires windowed Portal + ffmpeg)
+   python scripts/replay_live.py --backend source --chambers 0 --max-steps 280 `
+     --planner llm --llm-model lfm25-1.2b-layer4 `
+     --record-video records/videos/live_pov.mp4
+   ```
 
 ## Trajectory & Approach Visualizations
 
@@ -95,7 +146,7 @@ What comes next is tracked in [docs/ROADMAP.md](docs/ROADMAP.md), [docs/REAL_GAM
     python tools/check.py
     python tools/check.py --control
 
-Runs every gate (personal-path guard, Python↔C++ chamber 1–7 coordinate parity, held-out Chambers 5–7 isolation, `.vmf` integrity, Phase-2 checkpoint schema validation, and the 40-test unit/integration suite) and ends with `VERDICT: PASS`. Use `--quick` to skip the full evolution test during fast edits.
+Runs every gate (personal-path guard, Python↔C++ chamber 1–7 coordinate parity, held-out Chambers 5–7 isolation, `.vmf` integrity, Phase-2 checkpoint schema validation, and the 41-test unit/integration suite) and ends with `VERDICT: PASS`. Use `--quick` to skip the full evolution test during fast edits.
 
 ## Architecture
 
@@ -163,10 +214,8 @@ python scripts/train_mock.py --backend source --host 127.0.0.1 --port 27500
 | `tests/` | Unit and integration tests (including loopback TCP IPC bridge and evolution generalization) |
 | `docs/` | Project roadmap ([docs/ROADMAP.md](docs/ROADMAP.md)) |
 
-## Not affiliated with Valve
+## Licensing & Third-Party Notices
 
-Portal-ML is an independent research project. It is not affiliated with, or endorsed by, Valve Corporation. *Portal* and *Source* are trademarks of Valve Corporation.
-
-## Licence
-
-MIT, [LICENSE](LICENSE).
+- **Portal-ML source code, Behavior Tree & MLP checkpoints (`portal_ml/`, `source_plugin/`, `scripts/`, `champions/*.bt`, `champions/*.json`):** MIT License ([LICENSE](LICENSE)).
+- **Optional fine-tuned `lfm25-1.2b-portal-ml-layer4-Q8_0.gguf` model release asset:** Derivative fine-tune of **`LiquidAI/LFM2.5-1.2B-Instruct`** (Liquid AI, Inc.), governed by the **LFM Open License v1.0** ([docs/licenses/LFM_OPEN_LICENSE_1.0.txt](docs/licenses/LFM_OPEN_LICENSE_1.0.txt) and [docs/licenses/NOTICE_LFM25.txt](docs/licenses/NOTICE_LFM25.txt)). Free for research, education, non-profit, and commercial entities under \$10M annual revenue.
+- **Not affiliated with Valve or Liquid AI:** Portal-ML is an independent research project. It is not affiliated with, or endorsed by, Valve Corporation or Liquid AI, Inc. *Portal* and *Source* are trademarks of Valve Corporation. Live *Portal 1* execution requires your own licensed copy of *Portal* (Steam AppID 400).

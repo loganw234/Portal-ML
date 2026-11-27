@@ -4,8 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "portal-ml"
-version = "0.1.0"
-description = "Hybrid Neuroevolutionary Reasoning Agent in Portal (PoC): Decoupled Behavior Tree DSL + Motor Primitives + Source Engine Bridge"
+version = "1.0.0"
+description = "Four-layer decoupled neuroevolutionary reasoning agent for Portal 1: symbolic Blackboard + LiDAR, evolved Behavior Tree DSL, neuroevolved multi-skill MLPs, and a 20/20 LoRA-tuned 1.2B strategic planner"
+readme = "README.md"
+license = { file = "LICENSE" }
 requires-python = ">=3.11"
 dependencies = []
 

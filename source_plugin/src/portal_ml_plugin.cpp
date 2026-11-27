@@ -23,6 +23,17 @@ int ExtractIntField(const std::string& json, const std::string& key, int fallbac
     pos += needle.size();
     return std::atoi(json.c_str() + pos);
 }
+
+std::string ExtractStringField(
+    const std::string& json, const std::string& key, const std::string& fallback) {
+    const std::string needle = "\"" + key + "\":\"";
+    auto pos = json.find(needle);
+    if (pos == std::string::npos) return fallback;
+    pos += needle.size();
+    auto end = json.find('"', pos);
+    if (end == std::string::npos) return fallback;
+    return json.substr(pos, end - pos);
+}
 }  // namespace
 
 void PortalMLPlugin::SendServerCmd(const std::string& cmd, bool execute_now) const {
@@ -406,6 +417,43 @@ void PortalMLPlugin::GameFrame(bool simulating) {
             pending_subticks_ = subticks_per_step_;
         }
         awaiting_post_step_ = true;
+        return;
+    }
+
+    if (req.find("\"op\":\"start_movie\"") != std::string::npos) {
+        const std::string prefix = ExtractStringField(req, "prefix", "pml_rec");
+        const int fps = ExtractIntField(req, "fps", 60);
+        std::string safe_prefix;
+        for (char c : prefix) {
+            if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+                (c >= '0' && c <= '9') || c == '_' || c == '-') {
+                safe_prefix.push_back(c);
+            }
+        }
+        if (safe_prefix.empty()) safe_prefix = "pml_rec";
+        std::ostringstream cmd;
+        cmd << "m_pitch 0; m_yaw 0; setang 0 0 0; host_framerate "
+            << (fps > 0 ? fps : 60) << "; startmovie " << safe_prefix << "\n";
+        SendServerCmd(cmd.str(), false);
+        std::string gdir_str;
+#ifdef PORTAL_ML_USE_SOURCE_SDK
+        if (auto* engine = static_cast<IVEngineServer*>(engine_)) {
+            char gdir[512] = {};
+            engine->GetGameDir(gdir, sizeof(gdir));
+            gdir_str = gdir;
+            for (char& ch : gdir_str) {
+                if (ch == '\\') ch = '/';
+            }
+        }
+#endif
+        ipc_.SendFrame("{\"ok\":true,\"op\":\"start_movie\",\"prefix\":\"" + safe_prefix +
+                       "\",\"game_dir\":\"" + gdir_str + "\"}");
+        return;
+    }
+
+    if (req.find("\"op\":\"end_movie\"") != std::string::npos) {
+        SendServerCmd("endmovie; host_framerate 0; m_pitch 0.022; m_yaw 0.022\n", false);
+        ipc_.SendFrame("{\"ok\":true,\"op\":\"end_movie\"}");
         return;
     }
 

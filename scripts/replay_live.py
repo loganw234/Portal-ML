@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -78,6 +80,17 @@ def main() -> int:
         help="Model identifier served by LM Studio / Ollama / llama-server",
     )
     parser.add_argument("--llm-timeout", type=float, default=8.0, help="Layer-4 LLM HTTP timeout in seconds")
+    parser.add_argument(
+        "--record-video",
+        default="",
+        help="Optional MP4 path to record rendered first-person Portal 1 POV via Source startmovie + ffmpeg",
+    )
+    parser.add_argument(
+        "--record-fps",
+        type=int,
+        default=60,
+        help="Fixed Source host_framerate for --record-video (default: 60 to match Portal 1 physics)",
+    )
     args = parser.parse_args()
 
     tree, label = load_tree(args.bt)
@@ -123,7 +136,11 @@ def main() -> int:
     allow_orange = True
     chambers_to_run = list(args.chambers)
     if args.backend == "source":
-        source_env = SourcePortalEnv(host=args.host, port=args.port, timeout=15.0)
+        source_env = SourcePortalEnv(
+            host=args.host,
+            port=args.port,
+            timeout=45.0 if args.record_video else 15.0,
+        )
         source_env.connect()
         assert source_env.ping(), "Bridge ping failed"
         info = source_env.map_info()
@@ -140,6 +157,16 @@ def main() -> int:
         env = source_env
     else:
         env = MockPortalEnv()
+
+    rec_game_dir: Path | None = None
+    rec_prefix = "pml_rec"
+    if args.record_video and source_env is not None:
+        rec_prefix = f"pml_rec_{int(time.time())}"
+        rec_info = source_env.start_movie(prefix=rec_prefix, fps=args.record_fps)
+        gdir = rec_info.get("game_dir", "")
+        if gdir:
+            rec_game_dir = Path(gdir)
+        print(f"Recording first-person Portal 1 POV -> {args.record_video} ({args.record_fps} fps, prefix={rec_prefix})")
 
     solid_r = 46.0 if args.backend == "source" else 18.0
     floor_r = 28.0 if args.backend == "source" else 18.0
@@ -240,10 +267,61 @@ def main() -> int:
                 f"| final_pos={[round(v,1) for v in snap.player.pos.to_list()]} z={snap.player.zone_id}"
             )
     finally:
+        if args.record_video and source_env is not None:
+            try:
+                source_env.end_movie()
+                time.sleep(0.75)
+            except Exception as exc:  # noqa: BLE001
+                print(f"WARNING: end_movie failed: {exc}")
         if source_env is not None:
             source_env.close()
         if trace_fp is not None:
             trace_fp.close()
+
+    if args.record_video and rec_game_dir is not None and rec_game_dir.exists():
+        tga_files = sorted(rec_game_dir.glob(f"{rec_prefix}*.tga"))
+        wav_path = rec_game_dir / f"{rec_prefix}.wav"
+        ffmpeg = shutil.which("ffmpeg")
+        if tga_files and ffmpeg:
+            out_mp4 = Path(args.record_video)
+            out_mp4.parent.mkdir(parents=True, exist_ok=True)
+            cmd = [
+                ffmpeg,
+                "-y",
+                "-framerate",
+                str(args.record_fps),
+                "-i",
+                str(rec_game_dir / f"{rec_prefix}%04d.tga"),
+            ]
+            if wav_path.exists() and wav_path.stat().st_size > 1024:
+                cmd.extend(["-i", str(wav_path)])
+            cmd.extend(
+                [
+                    "-c:v",
+                    "libx264",
+                    "-preset",
+                    "fast",
+                    "-crf",
+                    "18",
+                    "-pix_fmt",
+                    "yuv420p",
+                ]
+            )
+            if wav_path.exists() and wav_path.stat().st_size > 1024:
+                cmd.extend(["-c:a", "aac", "-b:a", "192k", "-shortest"])
+            cmd.append(str(out_mp4))
+            subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+            print(
+                f"Saved POV video -> {out_mp4} "
+                f"({len(tga_files)} frames, {out_mp4.stat().st_size / (1024 * 1024):.2f} MB)"
+            )
+            for f in tga_files:
+                f.unlink(missing_ok=True)
+            wav_path.unlink(missing_ok=True)
+        else:
+            print(
+                f"WARNING: Could not mux POV video (frames={len(tga_files)}, ffmpeg={ffmpeg})"
+            )
 
     print(f"SUMMARY: {passed_count}/{len(chambers_to_run)} chambers passed ({args.backend})")
     return 0 if passed_count == len(chambers_to_run) else 1

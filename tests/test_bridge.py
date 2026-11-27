@@ -23,6 +23,17 @@ class TestSourceBridge(unittest.TestCase):
                         snap = res.snapshot
                     self.assertTrue(snap.success, f"Chamber {cid} failed over TCP IPC bridge")
 
+    def test_movie_capture_ipc_roundtrip(self) -> None:
+        with MockBridgeServer(port=0) as server:
+            with SourcePortalEnv(host=server.host, port=server.port) as env:
+                started = env.start_movie(prefix="test_clip", fps=60)
+                self.assertTrue(started["ok"])
+                self.assertEqual(started["op"], "start_movie")
+                self.assertEqual(started["prefix"], "test_clip")
+                stopped = env.end_movie()
+                self.assertTrue(stopped["ok"])
+                self.assertEqual(stopped["op"], "end_movie")
+
 
 if __name__ == "__main__":
     unittest.main()

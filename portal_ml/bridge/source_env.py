@@ -75,6 +75,12 @@ class SourcePortalEnv:
     def map_info(self) -> dict[str, Any]:
         return self._request({"op": "map_info"})
 
+    def start_movie(self, prefix: str = "pml_rec", fps: int = 60) -> dict[str, Any]:
+        return self._request({"op": "start_movie", "prefix": str(prefix), "fps": int(fps)})
+
+    def end_movie(self) -> dict[str, Any]:
+        return self._request({"op": "end_movie"})
+
     def reset(self, chamber_id: int) -> BlackboardSnapshot:
         resp = self._request({"op": "reset", "chamber_id": int(chamber_id)})
         return BlackboardSnapshot.from_dict(resp["snapshot"])
@@ -166,6 +172,18 @@ class MockBridgeServer:
                             "milestones": res.milestones,
                         },
                     )
+                elif op == "start_movie":
+                    send_frame(
+                        client,
+                        {
+                            "ok": True,
+                            "op": "start_movie",
+                            "prefix": str(req.get("prefix", "pml_rec")),
+                            "game_dir": "",
+                        },
+                    )
+                elif op == "end_movie":
+                    send_frame(client, {"ok": True, "op": "end_movie"})
                 elif op == "shutdown":
                     send_frame(client, {"ok": True, "op": "shutdown"})
                     self._stop_event.set()

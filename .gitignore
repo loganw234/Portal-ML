@@ -13,3 +13,5 @@ maps/*.bsp
 maps/*.prt
 maps/*.log
 maps/*.lin
+records/videos/
+dist/
