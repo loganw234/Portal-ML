@@ -115,6 +115,8 @@ class FourLayerAgent:
     def reset(self, initial_snapshot: BlackboardSnapshot | None = None) -> None:
         self.evaluator.reset()
         self.memory.clear()
+        if self.hybrid_motor is not None:
+            self.hybrid_motor.reset_stats()
         self._current_directive = None
         self._prev_active_map.clear()
         self._prev_zone = -1

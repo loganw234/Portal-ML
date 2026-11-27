@@ -52,8 +52,14 @@ def main() -> int:
     parser.add_argument("--max-steps", type=int, default=260)
     parser.add_argument("--verbose", action="store_true", help="Print every tick")
     parser.add_argument("--trace-out", default="", help="Optional JSONL file to record tick traces")
-    parser.add_argument("--neural-moveto", default="", help="Optional Phase-2 MoveTo MLP JSON checkpoint")
+    parser.add_argument("--neural-moveto", default="", help="Optional Phase-2 precision MoveTo MLP JSON checkpoint")
     parser.add_argument("--neural-parkour", default="", help="Optional Milestone-7 sensor-equipped Parkour MLP JSON checkpoint")
+    parser.add_argument(
+        "--skill-mode",
+        choices=["auto", "precision", "parkour"],
+        default="auto",
+        help="Multi-skill routing mode when both --neural-moveto and --neural-parkour are provided",
+    )
     parser.add_argument("--neural-aim", default="", help="Optional Phase-2 ShootPortal Aim MLP JSON checkpoint")
     parser.add_argument(
         "--planner",
@@ -76,16 +82,27 @@ def main() -> int:
 
     tree, label = load_tree(args.bt)
     moveto_pol: NeuralMoveToPolicy | NeuralParkourPolicy | None = None
-    if args.neural_parkour:
+    parkour_pol: NeuralParkourPolicy | None = None
+    if args.neural_moveto and args.neural_parkour:
+        moveto_pol = NeuralMoveToPolicy.load(args.neural_moveto)
+        parkour_pol = NeuralParkourPolicy.load(args.neural_parkour)
+    elif args.neural_parkour:
         moveto_pol = NeuralParkourPolicy.load(args.neural_parkour)
     elif args.neural_moveto:
         moveto_pol = NeuralMoveToPolicy.load(args.neural_moveto)
     aim_pol = NeuralAimPolicy.load(args.neural_aim) if args.neural_aim else None
-    hybrid = HybridMotorController(moveto_policy=moveto_pol, aim_policy=aim_pol)
+    hybrid = HybridMotorController(
+        moveto_policy=moveto_pol,
+        aim_policy=aim_pol,
+        parkour_policy=parkour_pol,
+        skill_mode=args.skill_mode,
+    )
     motor_desc = []
     if moveto_pol is not None:
         mtag = "neural_parkour" if isinstance(moveto_pol, NeuralParkourPolicy) else "neural_moveto"
         motor_desc.append(f"{mtag}({len(moveto_pol.net.weights)}w)")
+    if parkour_pol is not None:
+        motor_desc.append(f"parkour({len(parkour_pol.net.weights)}w,mode={args.skill_mode})")
     if aim_pol is not None:
         motor_desc.append(f"neural_aim({len(aim_pol.net.weights)}w)")
     motor_str = "+".join(motor_desc) if motor_desc else "scripted"

@@ -91,11 +91,22 @@ Started 2026-11-26. Objective: prove a decoupled 3-layer neuroevolutionary reaso
     - Milestone 7 sensor `NeuralParkour (208w+44w)`: **`7/7` standard, `3/3` multi-stage (L4), `3/3` parkour** (`P1` Partition Slalom 19 steps / 100 HP; `P2` Hurdle & Acid Trench 22 steps / 75 HP; `P3` Gap Jump & Timed Vault 28 steps / 100 HP) — **13/13 PASS**.
   - Honest live transfer observation (`records/live_7ch_parkour_2026-11-27.jsonl`): zero-shot `NeuralParkour` cleared **4/7 live in Portal 1** (`Ch1` 8 steps, `Ch2` 11 steps, `Ch3` 42 steps, `Ch4` 122 steps) while jumping over cubes/portals on Ch5–7 because `SkipPlayerFilter` traces knee-height loose cubes as `step_clearance=+1.0` — motivating target-aware ray filtering & Layer-4 `skill_mode` routing in Milestone 8.
 
+### Milestone 8 — Multi-Skill Routing, First Full 4-Layer Live Portal 1 Sweep & `LFM2.5-1.2B` Distillation Pipeline (Done, 2026-11-27)
+- **Target-aware ray filtering & multi-skill routing (`portal_ml/motor/hybrid.py`, `source_plugin/src/blackboard_extractor.cpp`):**
+  - Updated C++ `ComputeLocalSensors` to trace the knee-vs-chest `step_clearance` hurdle probe against world + static props (`CTraceFilterWorldAndPropsOnly`), preventing loose `prop_physics` cubes from masquerading as hurdles while preserving `SkipPlayerFilter` on `wall_rays` and `floor_probes`.
+  - Upgraded `HybridMotorController` with `skill_mode` (`"auto" | "precision" | "parkour"`), dynamically routing between precision `NeuralMoveTo (83w)` and sensor-equipped `NeuralParkour (208w)` using Layer-1 sensors (`hazard_ahead`, `step_clearance` with distance-gated wall filtering, and gap `floor_probes`) + 8-tick maneuver hysteresis.
+  - Verified **13/13 mock sweep** (`records/ablation_parkour_2026-11-27.json`): `7/7` standard (Ch 1–7, `0` parkour ticks on Ch 1), `3/3` multi-stage L4 (`M1–M3`), and `3/3` held-out parkour (`P1` 23 steps / 100 HP, `P2` 22 steps / 75 HP, `P3` 28 steps / 100 HP).
+- **First-ever full 4-layer live Portal 1 sweep (`records/live_7ch_4layer_phi4mini_2026-11-27.jsonl`):**
+  - Ran all four layers simultaneously live inside Portal 1 (`portal_ml_5chambers`, `-textmode`): Layer 1 native C++ `IEngineTrace` Blackboard -> Layer 4 live `phi-4-mini-instruct @ 4k` (LM Studio, RTX 5060 Ti) -> Layer 2 frozen 24-node `champions/seed7_decoupled.bt` -> Layer 3 Multi-Skill Auto neural stack (`83w+208w+44w`).
+  - **7/7 chambers PASSED live in Portal 1:** Ch1 `13st` (1 call), Ch2 `59st` (3 calls), Ch3 `21st` (2 calls), Ch4 `21st` (1 call), Ch5 `70st` (2 calls), Ch6 `60st` (2 calls), Ch7 `87st` (2 calls) — **13 total live LLM calls (6.43s total LLM inference), 0 fallbacks, 0 warnings**.
+- **Layer-4 `LFM2.5-1.2B` distillation dataset & LoRA pipeline:**
+  - Built zero-dependency ChatML dataset generator (`scripts/build_layer4_dataset.py`) producing strictly disjoint `records/layer4_distill_train.jsonl` (500 verified examples) and `records/layer4_distill_val.jsonl` (100 verified examples) over-sampling Stage-2 multi-button switching and fizzler/stall recovery with zero benchmark ID leakage.
+  - Added ready-to-run CUDA LoRA fine-tuning entry point (`scripts/train_lfm25_lora.py`) targeting `LiquidAI/LFM2.5-1.2B-Instruct` (`r=16`, `bf16`, `--merge` for GGUF export back to LM Studio).
+
 ---
 
 ## Upcoming Milestones (Worked One at a Time)
 
-### Milestone 8 — Multi-Skill Routing (`skill_mode`), Native `+use` Carry/Drop & `LFM2.5-1.2B` LoRA Distillation
-- Add target-aware ray filtering (ignoring the targeted `cube`/button during `Grab`/`Drop`) + Layer-4 `skill_mode` routing (`NeuralMoveTo` vs `NeuralParkour` vs future `NeuralFling`) so `NeuralParkour` hits 7/7 live in Portal 1 too.
-- Replace `point_teleport` cube drops with native `+use` / `CPlayerPickupController` carry-and-drop in `source_plugin/src/motor_controller.cpp` and test live 4-layer runs (`phi-4-mini-instruct @ 4k`) on multi-room campaign maps (`testchmb_a_02` Rooms 1–2, `testchmb_a_05`).
-- Build JSONL trace distillation dataset (`records/*.jsonl` -> `(symbolic_digest, semantic_action)`) and LoRA-finetune `LFM2.5-1.2B` (from `16/20` -> `20/20` matching `Phi-4-mini` at 1.25 GB).
+### Milestone 9 — `LFM2.5-1.2B` LoRA Execution, Native `+use` Carry/Drop & Multi-Room Campaign Maps
+- Execute `scripts/train_lfm25_lora.py` in a CUDA PyTorch environment, export GGUF to LM Studio, and ablate fine-tuned `LFM2.5-1.2B` against `Phi-4-mini @ 4k` (`16/20 -> 20/20` target at 1.25 GB / ~330 ms).
+- Replace `point_teleport` cube drops with native `+use` / `CPlayerPickupController` carry-and-drop in `source_plugin/src/motor_controller.cpp` and run live 4-layer sweeps on multi-room Valve maps (`testchmb_a_02` Rooms 1–2, `testchmb_a_05`).

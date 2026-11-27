@@ -405,8 +405,11 @@ void BlackboardExtractor::ComputeLocalSensors(BlackboardState& state) {
         state.sensors.floor_probes[i] = tr.fraction;
     }
 
-    // 3. Forward knee-vs-high hurdle clearance probe (72u ahead)
+    // 3. Forward knee-vs-high hurdle clearance probe (72u ahead).
+    // Uses world-and-static-props filter so movable prop_physics cubes do not
+    // masquerade as jumpable hurdles when approaching a cube to pick it up.
     {
+        CTraceFilterWorldAndPropsOnly static_filter;
         const float fdx = std::cos(yaw_rad) * 72.0f;
         const float fdy = std::sin(yaw_rad) * 72.0f;
         Ray_t r_knee, r_high;
@@ -417,8 +420,8 @@ void BlackboardExtractor::ComputeLocalSensors(BlackboardState& state) {
             Vector(state.player_pos.x, state.player_pos.y, high_z),
             Vector(state.player_pos.x + fdx, state.player_pos.y + fdy, high_z));
         trace_t tr_k, tr_h;
-        trace->TraceRay(r_knee, MASK_PLAYERSOLID, &filter, &tr_k);
-        trace->TraceRay(r_high, MASK_PLAYERSOLID, &filter, &tr_h);
+        trace->TraceRay(r_knee, MASK_PLAYERSOLID, &static_filter, &tr_k);
+        trace->TraceRay(r_high, MASK_PLAYERSOLID, &static_filter, &tr_h);
         if (tr_k.fraction < 0.94f && tr_h.fraction >= 0.94f) {
             state.sensors.step_clearance = 1.0f;
         } else if (tr_k.fraction < 0.94f && tr_h.fraction < 0.94f) {

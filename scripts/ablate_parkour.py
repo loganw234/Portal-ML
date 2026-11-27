@@ -119,6 +119,15 @@ def main() -> int:
             f"Milestone 7 Sensor NeuralParkour ({len(parkour.net.weights)}w+{len(aim.net.weights)}w)",
             HybridMotorController(moveto_policy=parkour, aim_policy=aim),
         ),
+        (
+            f"Milestone 8 Multi-Skill Auto ({len(moveto.net.weights)}w+{len(parkour.net.weights)}w+{len(aim.net.weights)}w)",
+            HybridMotorController(
+                moveto_policy=moveto,
+                parkour_policy=parkour,
+                aim_policy=aim,
+                skill_mode="auto",
+            ),
+        ),
     ]
 
     report: dict[str, Any] = {

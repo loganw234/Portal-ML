@@ -70,16 +70,20 @@ Generated directly from recorded live Portal 1 and simulator traces via `python 
   - Verified live inside Portal 1 (`portal_ml_5chambers`, `records/live_physical_connections_2026-11-27.json` & unmodified Valve **`testchmb_a_08`**, `records/live_testchmb_a08_physical_2026-11-27.json`): live `IEngineTrace` wall/elevator/floor raycasts, real physical jump arc (**`delta_z = +60.48u`**, `saw_airborne = True`, `pitch = -6.0°`), and **7/7 PASS** live Phase-2B regression.
   - Evolved sensor-equipped **`champions/parkour_mlp.json`** (`12->12->4`, **208 weights**, 100.0% synthetic validation across 6 randomized 3D physics families). Controlled 13-chamber ablation (`scripts/ablate_parkour.py`, `records/ablation_parkour_2026-11-27.json`) underneath frozen `seed7_decoupled.bt`:
     - Scripted `MoveTo` & blind `NeuralMoveTo (83w+44w)`: `7/7` standard, `3/3` multi-stage, **`0/3` parkour (`P1–P3`)**.
-    - Sensor `NeuralParkour (208w+44w)`: **`7/7` standard, `3/3` multi-stage, `3/3` parkour** (`P1` Partition Slalom 19 steps, `P2` Hurdle & Acid Trench 22 steps, `P3` Gap Jump & Timed Vault 28 steps) — **13/13 PASS** (live zero-shot Portal 1 transfer: `4/7` on Ch1–4; Ch5–7 cube/button knee-height ray filtering queued for Milestone 8).
+    - Sensor `NeuralParkour (208w+44w)`: **`7/7` standard, `3/3` multi-stage, `3/3` parkour** (`P1` Partition Slalom 19 steps, `P2` Hurdle & Acid Trench 22 steps, `P3` Gap Jump & Timed Vault 28 steps) — **13/13 PASS**.
+- **Multi-skill neural routing, first full 4-layer live Portal 1 sweep, and `LFM2.5-1.2B` distillation corpus (Milestone 8, 2026-11-27).**
+  - Upgraded C++ `step_clearance` to ignore movable `prop_physics` cubes and upgraded `HybridMotorController` with automatic sensor-driven `skill_mode` routing (`precision 83w` <-> `parkour 208w` + `aim 44w`): **13/13 mock sweep** (`7/7` standard + `3/3` multi-stage L4 + `3/3` parkour P1–P3).
+  - **First-ever full 4-layer live Portal 1 sweep (`records/live_7ch_4layer_phi4mini_2026-11-27.jsonl`):** running live C++ `IEngineTrace` Blackboard + live **`phi-4-mini-instruct @ 4k`** (LM Studio) + frozen 24-node `seed7_decoupled.bt` + Multi-Skill Auto neural MLPs (`83w+208w+44w`) cleared **7/7 chambers live in Portal 1** (`13/59/21/21/70/60/87` steps; **13 total LLM calls**, 6.43s total LLM time, `0` fallbacks, `0` warnings).
+  - Built zero-dependency ChatML distillation corpus generator (`scripts/build_layer4_dataset.py` -> `records/layer4_distill_train.jsonl` 500 examples / `val.jsonl` 100 examples, strictly disjoint from all test chambers) + LoRA training script (`scripts/train_lfm25_lora.py`) for tuning `LiquidAI/LFM2.5-1.2B-Instruct`.
 
-What comes next is tracked in [docs/ROADMAP.md](docs/ROADMAP.md), [docs/REAL_GAME_ANALYSIS.md](docs/REAL_GAME_ANALYSIS.md), and [docs/FOUR_LAYER_ARCHITECTURE.md](docs/FOUR_LAYER_ARCHITECTURE.md): multi-skill routing (`skill_mode`), target-aware ray filtering, native `+use` cube carry/drop, and `LFM2.5-1.2B` LoRA distillation (Milestone 8).
+What comes next is tracked in [docs/ROADMAP.md](docs/ROADMAP.md), [docs/REAL_GAME_ANALYSIS.md](docs/REAL_GAME_ANALYSIS.md), and [docs/FOUR_LAYER_ARCHITECTURE.md](docs/FOUR_LAYER_ARCHITECTURE.md): executing `LFM2.5-1.2B` LoRA training, native `+use` cube carry/drop, and multi-room live campaign runs (Milestone 9).
 
 ## The front door
 
     python tools/check.py
     python tools/check.py --control
 
-Runs every gate (personal-path guard, Python↔C++ chamber 1–7 coordinate parity, held-out Chambers 5–7 isolation, `.vmf` integrity, Phase-2 checkpoint schema validation, and the 39-test unit/integration suite) and ends with `VERDICT: PASS`. Use `--quick` to skip the full evolution test during fast edits.
+Runs every gate (personal-path guard, Python↔C++ chamber 1–7 coordinate parity, held-out Chambers 5–7 isolation, `.vmf` integrity, Phase-2 checkpoint schema validation, and the 40-test unit/integration suite) and ends with `VERDICT: PASS`. Use `--quick` to skip the full evolution test during fast edits.
 
 ## Architecture
 

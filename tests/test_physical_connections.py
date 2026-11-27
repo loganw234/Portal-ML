@@ -160,6 +160,52 @@ class TestPhysicalConnectionsSchemaAndPhysics(unittest.TestCase):
             ).run_episode(env, chamber_id=cid)
             self.assertTrue(m.success, f"NeuralParkour failed standard chamber {cid}")
 
+    def test_multi_skill_auto_routing_and_distill_dataset(self) -> None:
+        tree = parse_bt(CHAMPION_BT_PATH.read_text(encoding="utf-8"))
+        aim = NeuralAimPolicy.load(AIM_MLP_PATH)
+        moveto = NeuralMoveToPolicy.load(MOVETO_MLP_PATH)
+        parkour = NeuralParkourPolicy.load(PARKOUR_MLP_PATH)
+        multi = HybridMotorController(
+            moveto_policy=moveto,
+            parkour_policy=parkour,
+            aim_policy=aim,
+            skill_mode="auto",
+        )
+        env = MockPortalEnv()
+
+        # Standard Chamber 1 stays in precision MoveTo (zero unnecessary parkour jumps)
+        m_c1 = FourLayerAgent(
+            BehaviorTreeEvaluator(tree), NullStrategicPlanner(), hybrid_motor=multi
+        ).run_episode(env, chamber_id=1)
+        self.assertTrue(m_c1.success)
+        self.assertGreater(multi.precision_ticks, 0)
+        self.assertEqual(multi.parkour_ticks, 0)
+
+        # Held-out Parkour P1-P3 dynamically engage NeuralParkour and pass 3/3
+        for key, spec in PARKOUR_BENCHMARKS.items():
+            m_pk = FourLayerAgent(
+                BehaviorTreeEvaluator(tree), NullStrategicPlanner(), hybrid_motor=multi
+            ).run_episode(env, spec=spec)
+            self.assertTrue(m_pk.success, f"Multi-skill auto failed {key}")
+            self.assertGreater(multi.parkour_ticks, 0, f"Parkour did not engage on {key}")
+
+        # Verify generated Layer-4 distillation JSONL has zero benchmark leakage
+        import json
+
+        train_path = ROOT / "records" / "layer4_distill_train.jsonl"
+        self.assertTrue(train_path.exists())
+        lines = train_path.read_text(encoding="utf-8").splitlines()
+        self.assertGreaterEqual(len(lines), 100)
+        for line in lines[:25]:
+            obj = json.loads(line)
+            msgs = obj["messages"]
+            self.assertEqual([m["role"] for m in msgs], ["system", "user", "assistant"])
+            user_txt = msgs[1]["content"]
+            for forbidden in ("m1_", "m2_", "m3_", "c5_", "c6_", "c7_"):
+                self.assertNotIn(forbidden, user_txt)
+            act = json.loads(msgs[2]["content"])
+            self.assertIn(act["action"], ("place_cube_on_button", "press_pedestal", "go_to_exit"))
+
 
 if __name__ == "__main__":
     unittest.main()
