@@ -1,4 +1,5 @@
 #include "motor_controller.h"
+#include "bsp_scanner.h"
 
 #include <cmath>
 #include <cstdlib>
@@ -181,9 +182,72 @@ void MotorController::Execute(
             StopMovement();
             return;
         }
-        const float nx = dx / dist;
-        const float ny = dy / dist;
+        float nx = dx / dist;
+        float ny = dy / dist;
         const bool is_portal = (cmd.entity_id == "portal:blue" || cmd.entity_id == "portal:orange");
+        // Generic pit-edge avoidance: if walking straight toward a zone-0 target drops
+        // into a sunken pit (zone 1), steer wide around the pit edge upon returning to zone 0.
+        if (extractor.IsGenericMode()) {
+            if (!is_portal && prev_zone_ == 0 && state.player_zone_id == 1 && !last_target_id_.empty()) {
+                if (pit_avoid_target_ == last_target_id_ && pit_avoid_steps_ > 0) {
+                    pit_avoid_sign_ = -pit_avoid_sign_;
+                } else {
+                    pit_avoid_sign_ = 1.0f;
+                }
+                pit_avoid_target_ = last_target_id_;
+                pit_avoid_steps_ = 16;
+            }
+            prev_zone_ = state.player_zone_id;
+        }
+        // Generic Bug-style obstacle wall-following on arbitrary campaign maps when
+        // forward progress toward target stalls against glass partitions / corners / doorframes.
+        if (extractor.IsGenericMode() && !is_portal && dist > 48.0f && state.tick > 2) {
+            if (cmd.entity_id != last_target_id_) {
+                last_target_id_ = cmd.entity_id;
+                best_target_dist_ = dist;
+                stall_steps_ = 0;
+                slide_remaining_ = 0;
+            }
+            if (dist < best_target_dist_ - 12.0f) {
+                best_target_dist_ = dist;
+                stall_steps_ = 0;
+                slide_remaining_ = 0;
+            } else {
+                const float cur_spd = std::hypot(state.player_vel.x, state.player_vel.y);
+                const float toward_spd = state.player_vel.x * nx + state.player_vel.y * ny;
+                if (toward_spd < 40.0f || cur_spd < 30.0f) {
+                    ++stall_steps_;
+                    if (stall_steps_ >= 2 && stall_steps_ < 12) {
+                        slide_remaining_ = 5;
+                    } else if (stall_steps_ == 12) {
+                        // Stage 2: trapped in a U-shaped pocket — back out 135 deg for 5 steps
+                        // then resume sliding around the outside of the pocket.
+                        slide_remaining_ = 10;
+                    } else if (stall_steps_ >= 26) {
+                        slide_sign_ = -slide_sign_;
+                        stall_steps_ = 2;
+                    }
+                }
+            }
+            if (slide_remaining_ > 0) {
+                --slide_remaining_;
+                const float offset = (stall_steps_ >= 12 && slide_remaining_ >= 5) ? 2.35f : 1.40f;
+                const float angle = std::atan2(ny, nx) + slide_sign_ * offset;
+                nx = std::cos(angle);
+                ny = std::sin(angle);
+            } else if (state.player_zone_id == 0 && pit_avoid_steps_ > 0 &&
+                       cmd.entity_id == pit_avoid_target_ && dist > 160.0f) {
+                --pit_avoid_steps_;
+                const float angle = std::atan2(ny, nx) + pit_avoid_sign_ * 0.55f;
+                nx = std::cos(angle);
+                ny = std::sin(angle);
+            }
+        } else {
+            last_target_id_.clear();
+            best_target_dist_ = 1e9f;
+            stall_steps_ = 0;
+            slide_remaining_ = 0;
+        }
         const float speed = (!is_portal && dist < 72.0f) ? 140.0f : kMoveSpeed;
         const float target_vx = nx * speed;
         const float target_vy = ny * speed;
@@ -255,34 +319,53 @@ void MotorController::Execute(
                     break;
                 }
             }
-            const auto& layout = GetChamberLayout(state.chamber_id);
-            float bx = layout.exit_pos.x - tgt_x;
-            float by = layout.exit_pos.y - tgt_y;
+            float bx = -1.0f;
+            float by = 0.0f;
+            if (extractor.IsGenericMode()) {
+                // Step back toward map spawn (guaranteed open room space, avoiding cube overlap)
+                const auto* gmap = extractor.GetGenericMap();
+                if (gmap) {
+                    bx = gmap->player_spawn.x - tgt_x;
+                    by = gmap->player_spawn.y - tgt_y;
+                }
+            } else {
+                const auto& layout = GetChamberLayout(state.chamber_id);
+                bx = layout.exit_pos.x - tgt_x;
+                by = layout.exit_pos.y - tgt_y;
+            }
             float bdist = std::hypot(bx, by);
             if (bdist < 1e-3f) {
                 bx = -1.0f;
                 by = 0.0f;
                 bdist = 1.0f;
             }
-            float clear_x = tgt_x + (bx / bdist) * 72.0f;
-            float clear_y = tgt_y + (by / bdist) * 72.0f;
-            for (const auto& z : layout.zones) {
-                if (z.zone_id == state.player_zone_id) {
-                    clear_x = ClampF(clear_x, z.min_x + 24.0f, z.max_x - 24.0f);
-                    clear_y = ClampF(clear_y, z.min_y + 24.0f, z.max_y - 24.0f);
-                    break;
+            const float clear_dist = extractor.IsGenericMode() ? 60.0f : 72.0f;
+            float clear_x = tgt_x + (bx / bdist) * clear_dist;
+            float clear_y = tgt_y + (by / bdist) * clear_dist;
+            float clear_z = extractor.IsGenericMode() ? (tgt_z + 4.0f) : 16.0f;
+            if (!extractor.IsGenericMode()) {
+                const auto& layout = GetChamberLayout(state.chamber_id);
+                for (const auto& z : layout.zones) {
+                    if (z.zone_id == state.player_zone_id) {
+                        clear_x = ClampF(clear_x, z.min_x + 24.0f, z.max_x - 24.0f);
+                        clear_y = ClampF(clear_y, z.min_y + 24.0f, z.max_y - 24.0f);
+                        break;
+                    }
                 }
             }
             const float dx = tgt_x - clear_x;
             const float dy = tgt_y - clear_y;
             const float d = std::max(18.0f, std::hypot(dx, dy));
             const float drop_yaw = std::atan2(dy, dx) * kRadToDeg;
-            // Player eyes at z = 16 + 64 = 80; aim down to button top (tgt_z = 12)
-            const float drop_pitch = std::atan2(80.0f - tgt_z, d) * kRadToDeg;
+            const float drop_pitch = std::atan2((clear_z + 64.0f) - tgt_z, d) * kRadToDeg;
 
-            ss << "setpos " << clear_x << ' ' << clear_y << " 16; ";
+            ss << "setpos " << clear_x << ' ' << clear_y << ' ' << clear_z << "; ";
             extractor.SetPlayerEyeAngles(drop_pitch, drop_yaw);
-            ss << "ent_fire " << state.held_entity_id << " AddOutput \"solid 6\"";
+            if (extractor.IsGenericMode()) {
+                ss << "ent_create point_teleport";
+            } else {
+                ss << "ent_fire " << state.held_entity_id << " AddOutput \"solid 6\"";
+            }
         }
         ss << "\n";
         IssueCmd(ss.str());
@@ -302,6 +385,23 @@ void MotorController::Execute(
         extractor.SetPlayerVelocityXY(0.0f, 0.0f);
         for (const auto& w : state.portal_walls) {
             if (w.id == cmd.wall_id) {
+                if (extractor.IsGenericMode()) {
+                    // Unmodified Valve campaign maps: aim the player's real weapon_portalgun
+                    // directly at the BSP concrete surface and fire FirePortal1 / FirePortal2.
+                    const float dx = w.pos.x - state.player_pos.x;
+                    const float dy = w.pos.y - state.player_pos.y;
+                    const float dz = w.pos.z - (state.player_pos.z + 64.0f);
+                    const float dxy = std::max(1.0f, std::hypot(dx, dy));
+                    const float aim_yaw = std::atan2(dy, dx) * kRadToDeg;
+                    const float aim_pitch = -std::atan2(dz, dxy) * kRadToDeg;
+                    extractor.SetPlayerEyeAngles(aim_pitch, aim_yaw);
+                    const char* fire_input = (cmd.color == "blue") ? "FirePortal1" : "FirePortal2";
+                    std::ostringstream ss;
+                    ss << "ent_fire weapon_portalgun " << fire_input << " \"\" 0.02\n";
+                    IssueCmd(ss.str());
+                    extractor.NotifyPortalPlacedWall(cmd.color, w);
+                    return;
+                }
                 const float yaw = std::atan2(w.normal.y, w.normal.x) * kRadToDeg;
                 // Place flush on the front face of the 1u concrete panel
                 const float px = w.pos.x + w.normal.x * 1.5f;
@@ -313,7 +413,7 @@ void MotorController::Execute(
                    << px << ' ' << py << ' ' << pz << " 0 " << yaw << " 0\"; "
                    << "ent_fire " << ent_name << " SetActivatedState 1\n";
                 IssueCmd(ss.str());
-                extractor.NotifyPortalPlaced(cmd.color, cmd.wall_id);
+                extractor.NotifyPortalPlacedWall(cmd.color, w);
                 return;
             }
         }

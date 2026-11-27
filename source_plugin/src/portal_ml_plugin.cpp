@@ -186,17 +186,53 @@ void PortalMLPlugin::GameFrame(bool simulating) {
             SendServerCmd(ss.str(), false);
         }
         if (awaiting_post_step_ && active_cmd_.kind == MotorCmdKind::kDrop &&
-            !pending_drop_cube_.empty() && pending_subticks_ == subticks_per_step_ - 2) {
-            // Player was already stepped 58u clear and aimed at the drop target on tick 0;
-            // now ent_teleport places the solid cube flush on top of the floor button with
-            // zero player-hull overlap.
-            std::ostringstream ss;
-            ss << "ent_teleport " << pending_drop_cube_ << "; "
-               << "ent_fire " << pending_drop_cube_ << " DisableMotion \"\" 0.01\n";
-            SendServerCmd(ss.str(), false);
-            extractor_.SetPlayerVelocityXY(0.0f, 0.0f, true);
-            extractor_.NotifyHoldState("");
-            pending_drop_cube_.clear();
+            !pending_drop_cube_.empty()) {
+            if (extractor_.IsGenericMode() && pending_subticks_ == 20) {
+                // Step 1 (after ~0.51s off button so Valve's player-trigger finishes
+                // OnEndTouchAll + floor_button_door_* finishes rising): configure
+                // point_teleport 28u above tgt_z and wake VPhysics while STILL solid=0
+                // so spare dropper cubes sharing targetname never collide/detonate.
+                std::ostringstream ss;
+                ss << "ent_fire point_teleport AddOutput \"angles 0 0 0\"; "
+                   << "ent_fire point_teleport AddOutput \"origin "
+                   << pending_drop_target_.x << ' ' << pending_drop_target_.y << ' '
+                   << (pending_drop_target_.z + 28.0f) << "\"; "
+                   << "ent_fire point_teleport AddOutput \"target " << pending_drop_cube_ << "\"; "
+                   << "ent_fire " << pending_drop_cube_ << " EnableMotion\n";
+                SendServerCmd(ss.str(), false);
+            } else if (extractor_.IsGenericMode() && pending_subticks_ == 18) {
+                // Step 2: Teleport while STILL solid=0 (separates active cube to dead-center
+                // above button pad with zero interpenetration impulse).
+                SendServerCmd("ent_fire point_teleport Teleport\n", false);
+            } else if (extractor_.IsGenericMode() && pending_subticks_ == 17) {
+                // Step 3: freeze at (-451.6, 189.4, 41.5) to zero linear/angular velocity.
+                SendServerCmd("ent_fire " + pending_drop_cube_ + " DisableMotion\n", false);
+            } else if (extractor_.IsGenericMode() && pending_subticks_ == 16) {
+                // Step 4: restore SOLID_VPHYSICS on a distinct tick while DisableMotion is active.
+                SendServerCmd("ent_fire " + pending_drop_cube_ + " AddOutput \"solid 6\"\n", false);
+            } else if (extractor_.IsGenericMode() && pending_subticks_ == 15) {
+                // Step 5: re-enable VPhysics + Wake on a distinct tick so gravity drops cube
+                // cleanly from rest straight onto the stationary floor button pad.
+                std::ostringstream ss;
+                ss << "ent_fire " << pending_drop_cube_ << " EnableMotion; "
+                   << "ent_fire " << pending_drop_cube_ << " Wake \"\" 0.02; "
+                   << "ent_fire point_teleport Kill \"\" 0.04\n";
+                SendServerCmd(ss.str(), false);
+                extractor_.SetPlayerVelocityXY(0.0f, 0.0f, true);
+                extractor_.NotifyHoldState("");
+                pending_drop_cube_.clear();
+            } else if (!extractor_.IsGenericMode() && pending_subticks_ == subticks_per_step_ - 2) {
+                // Player was already stepped 58u clear and aimed at the drop target on tick 0;
+                // now ent_teleport places the solid cube flush on top of the floor button with
+                // zero player-hull overlap.
+                std::ostringstream ss;
+                ss << "ent_teleport " << pending_drop_cube_ << "; "
+                   << "ent_fire " << pending_drop_cube_ << " DisableMotion \"\" 0.01\n";
+                SendServerCmd(ss.str(), false);
+                extractor_.SetPlayerVelocityXY(0.0f, 0.0f, true);
+                extractor_.NotifyHoldState("");
+                pending_drop_cube_.clear();
+            }
         }
         if (awaiting_post_step_ &&
             (active_cmd_.kind == MotorCmdKind::kMoveTo || active_cmd_.kind == MotorCmdKind::kMoveVec) &&
@@ -267,6 +303,8 @@ void PortalMLPlugin::GameFrame(bool simulating) {
         std::ostringstream info;
         info << "{\"ok\":true,\"op\":\"map_info\",\"map_name\":\"" << current_map_name_
              << "\",\"generic_mode\":" << (extractor_.IsGenericMode() ? "true" : "false")
+             << ",\"can_fire_blue\":" << (bsp_map_.can_fire_blue ? "true" : "false")
+             << ",\"can_fire_orange\":" << (bsp_map_.can_fire_orange ? "true" : "false")
              << ",\"discovered_entities\":" << bsp_map_.entities.size()
              << ",\"portal_surfaces\":" << bsp_map_.portal_surfaces.size() << '}';
         ipc_.SendFrame(info.str());
@@ -289,9 +327,26 @@ void PortalMLPlugin::GameFrame(bool simulating) {
         active_cmd_ = MotorController::ParseCommandJson(req);
         if (active_cmd_.kind == MotorCmdKind::kDrop) {
             pending_drop_cube_ = pre_state.held_entity_id;
+            pending_drop_target_ = {
+                pre_state.player_pos.x + std::cos(pre_state.player_yaw * (3.14159265f / 180.0f)) * 48.0f,
+                pre_state.player_pos.y + std::sin(pre_state.player_yaw * (3.14159265f / 180.0f)) * 48.0f,
+                pre_state.player_pos.z + 12.0f,
+            };
+            for (const auto& e : pre_state.entities) {
+                if (e.kind == "floor_button" && e.zone_id == pre_state.player_zone_id) {
+                    const float dx = e.pos.x - pre_state.player_pos.x;
+                    const float dy = e.pos.y - pre_state.player_pos.y;
+                    if (std::hypot(dx, dy) <= 56.0f) {
+                        pending_drop_target_ = {e.pos.x, e.pos.y, e.pos.z + 12.0f};
+                        break;
+                    }
+                }
+            }
         }
         motor_.Execute(active_cmd_, pre_state, extractor_);
-        pending_subticks_ = subticks_per_step_;
+        pending_subticks_ = (active_cmd_.kind == MotorCmdKind::kDrop && extractor_.IsGenericMode())
+                                ? 54
+                                : subticks_per_step_;
         awaiting_post_step_ = true;
         return;
     }

@@ -94,6 +94,35 @@ class TestBehaviorTreeDSL(unittest.TestCase):
         self.assertIs(res_near.status, NodeStatus.RUNNING)
         self.assertEqual(res_near.command.kind.value, "drop")
 
+    def test_single_portal_gun_remaps_orange_to_blue_and_protects_orange_zone(self) -> None:
+        env = MockPortalEnv()
+        snap = env.reset(4)
+        # Valve pre-places Orange portal in zone 1; player is in zone 0 with blue-only gun
+        snap.orange_portal.active = True
+        snap.orange_portal.zone_id = 1
+        snap.orange_portal.wall_id = "c4_wall_b"
+        tree = SequenceNode(
+            [
+                ActionNode("SetTarget", ("exit",)),
+                ActionNode("ShootPortal", ("orange", "wall_here")),
+            ]
+        )
+        ev = BehaviorTreeEvaluator(tree, allow_orange_portal=False)
+        res = ev.tick(snap)
+        self.assertIs(res.status, NodeStatus.RUNNING)
+        self.assertEqual(res.command, ShootPortal(color=PortalColor.BLUE, wall_id="c4_wall_a"))
+
+        # Must refuse to waste Blue portal on the zone Valve's Orange portal already covers
+        tree_same_zone = SequenceNode(
+            [
+                ActionNode("SetTarget", ("exit",)),
+                ActionNode("ShootPortal", ("blue", "wall_at_target")),
+            ]
+        )
+        ev2 = BehaviorTreeEvaluator(tree_same_zone, allow_orange_portal=False)
+        res2 = ev2.tick(snap)
+        self.assertIs(res2.status, NodeStatus.FAILURE)
+
 
 if __name__ == "__main__":
     unittest.main()

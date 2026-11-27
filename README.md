@@ -40,15 +40,21 @@ The core claim is architectural: separating *what* subgoal entity to pursue from
   - Verified **7/7 live Portal 1 PASS** for BOTH Phase 1 scripted (`13/35/22/11/51/40/43` steps, 2.66s total; `records/live_m4_native_phase1_2026-11-26.jsonl`) and Phase 2B neural `MoveTo(83w) + Aim(44w)` (`12/58/21/21/69/62/98` steps, 2.79s total, ~122 steps/sec, ~8.1ms resets; `records/live_m4_native_phase2b_2026-11-26.jsonl`).
   - Built C++ `BspScanner` (`source_plugin/src/bsp_scanner.cpp`) + Python mirror (`portal_ml/vmf/bsp_reader.py`) triggered automatically on `LevelInit` for arbitrary maps. Tested live on Valve's unmodified campaign map **`testchmb_a_02`** (`records/live_testchmb_a02_2026-11-26.json`): auto-discovered **9 gameplay entities** (cubes, composite `button_top_reference` floor buttons, exit doors) and **293 portalable concrete surfaces** (walls, floors, ceilings), streaming live `BlackboardSnapshot`s and native `MoveVector` motion over TCP IPC.
   - Documented the proposed **4th-layer small-LLM strategic memory & subgoal planner** in [docs/FOUR_LAYER_ARCHITECTURE.md](docs/FOUR_LAYER_ARCHITECTURE.md).
+- **First real unmodified Valve campaign chamber solved zero-shot (`testchmb_a_02` Room 1 / Test Chamber 04, Milestone 5, 2026-11-26).**
+  - Extended generic `BspScanner` + `ExtractGeneric` with vertical elevation zone clustering (`zone 0` main floor vs `zone 1` sunken pit), single-portal-gun detection (`weapon_portalgun` `CanFirePortal1`/`CanFirePortal2`), elevator/fizzler parsing, live `prop_portal` outward normals, physical `func_door` displacement confirmation (`d > 52u` from closed doorway center), and real `weapon_portalgun` firing (`ent_fire weapon_portalgun FirePortal1`).
+  - Added single-portal-gun remapping (`allow_orange_portal=False`) in `BehaviorTreeEvaluator` plus generic 2-stage obstacle wall-following and pit-edge avoidance in `MotorController`.
+  - **The frozen 24-node `champions/seed7_decoupled.bt` (trained strictly on synthetic mock Chambers 1–4, zero retraining) solved Valve's unmodified `testchmb_a_02` Room 1 end-to-end live in Portal 1:** triggered Valve's box dropper, entered the sunken pit, grabbed Valve's `box`, fired the real `weapon_portalgun` to open a Blue portal linked to Valve's fixed Orange portal, carried the cube through the portal, physically depressed `button_top_a_a02` to slide `exit_door_left_a02` / `exit_door_right_a02` open, walked past the fizzler, and entered the middle elevator (`a02-middle_elevator_body`).
+  - Measured live results: fastest verified solve **106 steps (11.87s, reward 174.70)**; saved verified pass trace (`records/live_testchmb_a02_solve_2026-11-26.jsonl`, **286 steps, 33.68s, reward 165.70**, all 7 milestones). Honest limitation: drop repeatability on `testchmb_a_02` within 350 steps is ~1/3–2/3 across launches because Valve's ceiling dropper spawns a spare `box` sharing `targetname="box"` and `point_teleport` VPhysics settling can roll off the circular button rim (replacing `point_teleport` with native `+use` / `CPlayerPickupController` carry-and-drop is queued for future motor hardening).
+  - Verified **zero regression** on the 7-chamber custom suite (`portal_ml_5chambers`, `-textmode`): **7/7 PASS** Phase 1 scripted (`13/35/22/11/49/39/45` steps) and **7/7 PASS** Phase 2B neural `MoveTo(83w) + Aim(44w)` (`13/59/21/20/72/61/86` steps).
 
-What comes next is tracked in [docs/ROADMAP.md](docs/ROADMAP.md), [docs/REAL_GAME_ANALYSIS.md](docs/REAL_GAME_ANALYSIS.md), and [docs/FOUR_LAYER_ARCHITECTURE.md](docs/FOUR_LAYER_ARCHITECTURE.md): live real-campaign benchmarking on `testchmb_a_02` (Milestone 5) and Layer-4 small-LLM strategic planning (Milestone 6).
+What comes next is tracked in [docs/ROADMAP.md](docs/ROADMAP.md), [docs/REAL_GAME_ANALYSIS.md](docs/REAL_GAME_ANALYSIS.md), and [docs/FOUR_LAYER_ARCHITECTURE.md](docs/FOUR_LAYER_ARCHITECTURE.md): Layer-4 small-LLM strategic memory & subgoal planning (Milestone 6).
 
 ## The front door
 
     python tools/check.py
     python tools/check.py --control
 
-Runs every gate (personal-path guard, Python↔C++ chamber 1–7 coordinate parity, held-out Chambers 5–7 isolation, `.vmf` integrity, Phase-2 checkpoint schema validation, and the 20-test unit/integration suite) and ends with `VERDICT: PASS`. Use `--quick` to skip the full evolution test during fast edits.
+Runs every gate (personal-path guard, Python↔C++ chamber 1–7 coordinate parity, held-out Chambers 5–7 isolation, `.vmf` integrity, Phase-2 checkpoint schema validation, and the 24-test unit/integration suite) and ends with `VERDICT: PASS`. Use `--quick` to skip the full evolution test during fast edits.
 
 ## Architecture
 

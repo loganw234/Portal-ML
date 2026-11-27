@@ -347,25 +347,26 @@ void BlackboardExtractor::OnResetChamber(int chamber_id) {
     tracked_orange_ = PortalRecord{"orange"};
 }
 
+void BlackboardExtractor::NotifyPortalPlacedWall(const std::string& color, const PortalWallRecord& w) {
+    PortalRecord& target = (color == "blue") ? tracked_blue_ : tracked_orange_;
+    PortalRecord& other = (color == "blue") ? tracked_orange_ : tracked_blue_;
+    if (other.active && other.wall_id == w.id) {
+        other.active = false;
+        other.wall_id.clear();
+        other.zone_id = -1;
+    }
+    target.active = true;
+    target.wall_id = w.id;
+    target.pos = w.pos;
+    target.normal = w.normal;
+    target.zone_id = w.zone_id;
+}
+
 void BlackboardExtractor::NotifyPortalPlaced(const std::string& color, const std::string& wall_id) {
-    auto apply_wall = [&](const PortalWallRecord& w) {
-        PortalRecord& target = (color == "blue") ? tracked_blue_ : tracked_orange_;
-        PortalRecord& other = (color == "blue") ? tracked_orange_ : tracked_blue_;
-        if (other.active && other.wall_id == wall_id) {
-            other.active = false;
-            other.wall_id.clear();
-            other.zone_id = -1;
-        }
-        target.active = true;
-        target.wall_id = w.id;
-        target.pos = w.pos;
-        target.normal = w.normal;
-        target.zone_id = w.zone_id;
-    };
     if (generic_map_) {
         for (const auto& w : generic_map_->portal_surfaces) {
             if (w.id == wall_id) {
-                apply_wall(w);
+                NotifyPortalPlacedWall(color, w);
                 return;
             }
         }
@@ -374,7 +375,7 @@ void BlackboardExtractor::NotifyPortalPlaced(const std::string& color, const std
     for (int cid = 4; cid <= 7; ++cid) {
         for (const auto& w : GetChamberPortalWalls(cid)) {
             if (w.id == wall_id) {
-                apply_wall(w);
+                NotifyPortalPlacedWall(color, w);
                 return;
             }
         }
@@ -570,8 +571,17 @@ BlackboardState BlackboardExtractor::ExtractGeneric(int tick, float dt) {
     state.blue_portal = tracked_blue_;
     state.orange_portal = tracked_orange_;
 
+    const float room_base_z = generic_map_->player_spawn.z;
+    auto classify_generic_zone = [room_base_z](float z) -> int {
+        if (z <= room_base_z - 96.0f) return 1;  // sunken pit / lower floor
+        if (z >= room_base_z + 140.0f) return 0; // dropper chute above room -> approach in zone 0
+        if (z >= room_base_z + 96.0f) return 2;  // upper ledge
+        return 0;                                // main floor
+    };
+
     std::vector<Vec3> live_props;
     std::vector<Vec3> live_doors;
+    std::vector<Vec3> live_door_spawns;
 
 #ifdef PORTAL_ML_USE_SOURCE_SDK
     auto* engine = static_cast<IVEngineServer*>(engine_);
@@ -610,11 +620,22 @@ BlackboardState BlackboardExtractor::ExtractGeneric(int tick, float dt) {
                 if (base) {
                     const bool activated = *reinterpret_cast<const bool*>(base + netprop_portal_activated_);
                     const bool is_orange = *reinterpret_cast<const bool*>(base + netprop_portal_is2_);
-                    if (activated) {
+                    if (activated && pos.z >= room_base_z - 320.0f && pos.z <= room_base_z + 260.0f) {
+                        const QAngle pang = col->GetCollisionAngles();
+                        const float py = pang.y * (3.14159265f / 180.0f);
+                        const float pp = pang.x * (3.14159265f / 180.0f);
                         PortalRecord& pr = is_orange ? state.orange_portal : state.blue_portal;
                         pr.active = true;
                         pr.pos = {pos.x, pos.y, pos.z};
-                        pr.zone_id = 0;
+                        pr.normal = {
+                            std::cos(py) * std::cos(pp),
+                            std::sin(py) * std::cos(pp),
+                            -std::sin(pp),
+                        };
+                        pr.zone_id = classify_generic_zone(pos.z);
+                        if (pr.wall_id.empty()) {
+                            pr.wall_id = is_orange ? "live_portal_orange" : "live_portal_blue";
+                        }
                     }
                 }
             }
@@ -631,7 +652,17 @@ BlackboardState BlackboardExtractor::ExtractGeneric(int tick, float dt) {
     }
     prev_player_pos_ = state.player_pos;
     has_prev_pos_ = true;
-    state.player_zone_id = 0;
+    state.player_zone_id = classify_generic_zone(state.player_pos.z);
+    if (has_tracked_yaw_) {
+        if (prev_zone_id_ >= 0 && state.player_zone_id != prev_zone_id_) {
+            tracked_yaw_ = state.player_yaw;
+            tracked_pitch_ = state.player_pitch;
+        } else {
+            state.player_yaw = tracked_yaw_;
+            state.player_pitch = tracked_pitch_;
+        }
+    }
+    prev_zone_id_ = state.player_zone_id;
     state.held_entity_id = tracked_held_id_;
 
     auto dist3 = [](const Vec3& a, const Vec3& b) -> float {
@@ -641,65 +672,205 @@ BlackboardState BlackboardExtractor::ExtractGeneric(int tick, float dt) {
         return std::sqrt(dx * dx + dy * dy + dz * dz);
     };
 
-    // Match BSP-discovered gameplay entities to live server positions
-    std::vector<Vec3> cube_positions;
+    // Locate room-local elevator (for campaign exit progression after exit door opens)
+    bool has_room_elevator = false;
+    Vec3 room_elevator_pos{};
+    float best_elev_d = 1e9f;
     for (const auto& de : generic_map_->entities) {
+        if (de.kind == "elevator" &&
+            de.spawn_pos.z >= room_base_z - 64.0f && de.spawn_pos.z <= room_base_z + 220.0f) {
+            const float d = DistXY(de.spawn_pos, generic_map_->player_spawn);
+            if (d > 256.0f && d < best_elev_d) {
+                best_elev_d = d;
+                room_elevator_pos = de.spawn_pos;
+                has_room_elevator = true;
+            }
+        }
+    }
+
+    // Filter BSP-discovered gameplay entities to the active vertical room band
+    std::vector<Vec3> cube_positions;
+    bool any_room_button_active = false;
+    for (const auto& de : generic_map_->entities) {
+        if (de.kind == "elevator" || de.kind == "fizzler") continue;
+        // Room Z-band filter: keep entities in this story (plus dropper cubes hovering above)
+        const bool in_room_z =
+            (de.spawn_pos.z >= room_base_z - 320.0f && de.spawn_pos.z <= room_base_z + 260.0f);
+        const bool is_dropper_cube =
+            (de.kind == "cube" && de.spawn_pos.z > room_base_z + 260.0f &&
+             DistXY(de.spawn_pos, generic_map_->player_spawn) < 1200.0f);
+        if (!in_room_z && !is_dropper_cube) continue;
+
         Vec3 pos = de.spawn_pos;
         bool active = false;
         const bool is_held = (!tracked_held_id_.empty() && tracked_held_id_ == de.id);
 
         if (de.kind == "cube") {
-            float best_d = 1024.0f;
+            // Prefer a live prop_physics already dropped into the playable chamber
+            // (z <= room_base_z + 200) over a spare cube waiting inside a ceiling dropper.
+            bool found_in_room = false;
+            float best_room_d = 900.0f;
+            float best_hopper_d = 384.0f;
             for (const auto& lp : live_props) {
-                const float d = dist3(lp, de.spawn_pos);
-                if (d < best_d) {
-                    best_d = d;
+                if (lp.z < room_base_z - 320.0f || lp.z > room_base_z + 640.0f) continue;
+                const float d = DistXY(lp, de.spawn_pos);
+                if (lp.z <= room_base_z + 140.0f) {
+                    if (d < best_room_d) {
+                        best_room_d = d;
+                        pos = lp;
+                        found_in_room = true;
+                    }
+                } else if (!found_in_room && d < best_hopper_d) {
+                    best_hopper_d = d;
                     pos = lp;
                 }
             }
-            cube_positions.push_back(pos);
+            if (is_held) {
+                pos = state.player_pos;
+            } else {
+                cube_positions.push_back(pos);
+            }
         } else if (de.kind == "exit_door") {
-            float best_d = 192.0f;
+            // Check whether physical sliding func_door moved away from closed doorway center
+            // (paired doors rest ~34-36u from doorway center when shut and ~86u when open).
+            float best_d = 160.0f;
             for (const auto& ld : live_doors) {
                 const float d = dist3(ld, de.spawn_pos);
                 if (d < best_d) {
                     best_d = d;
-                    active = (d > 16.0f);
+                    active = (d > 52.0f);
                 }
             }
         }
 
-        state.entities.push_back({de.id, de.kind, pos, {}, 0, active, is_held, 0.0f});
+        const int ent_zone = is_held ? state.player_zone_id : classify_generic_zone(pos.z);
+        // When a cube is still up in a ceiling dropper, project its target slightly outside pit edge
+        // so walking toward it triggers the dropper without falling prematurely.
+        Vec3 exposed_pos = pos;
+        if (de.kind == "cube" && !is_held && pos.z > room_base_z + 140.0f) {
+            exposed_pos.y = pos.y + 64.0f;
+            exposed_pos.z = room_base_z;
+        }
+        state.entities.push_back({de.id, de.kind, exposed_pos, {}, ent_zone, active, is_held, 0.0f});
     }
 
-    // Check floor button activation by live cube proximity
+    // Check whether any physical room exit_door has slid open in Source Engine
+    bool any_door_physically_open = false;
+    bool has_any_door = false;
+    for (const auto& e : state.entities) {
+        if (e.kind == "exit_door") {
+            has_any_door = true;
+            if (e.active) any_door_physically_open = true;
+        }
+    }
+
+    // Activate floor buttons by ANY live in-room prop_physics cube (not held).
+    // When a physical func_door exists in the room, also require it to be physically open
+    // (preventing false positives if a cube rests on the outer rim outside Valve's trigger).
+    Vec3 pressed_cube_pos{};
+    bool has_pressed_cube = false;
     for (auto& e : state.entities) {
         if (e.kind == "floor_button") {
-            for (const auto& cp : cube_positions) {
-                if (DistXY(cp, e.pos) <= kButtonTriggerRadius &&
-                    std::fabs(cp.z - e.pos.z) <= 56.0f) {
+            for (const auto& lp : live_props) {
+                if (!tracked_held_id_.empty() && DistXY(lp, state.player_pos) < 32.0f &&
+                    std::fabs(lp.z - (state.player_pos.z + 108.0f)) < 48.0f) {
+                    continue;  // ignore cube currently carried overhead
+                }
+                const float dist_xy = DistXY(lp, e.pos);
+                const bool within_pad = (dist_xy <= 52.0f && std::fabs(lp.z - e.pos.z) <= 56.0f);
+                const bool confirmed = has_any_door ? (within_pad && any_door_physically_open)
+                                                    : (dist_xy <= kButtonTriggerRadius &&
+                                                       std::fabs(lp.z - e.pos.z) <= 56.0f);
+                if (confirmed) {
                     e.active = true;
+                    any_room_button_active = true;
+                    pressed_cube_pos = lp;
+                    has_pressed_cube = true;
                     break;
                 }
             }
         }
     }
+    if (has_pressed_cube) {
+        for (auto& e : state.entities) {
+            if (e.kind == "cube" && !e.held) {
+                e.active = true;  // cube_on_button predicate satisfied
+                e.pos = pressed_cube_pos;
+                e.zone_id = classify_generic_zone(pressed_cube_pos.z);
+                break;
+            }
+        }
+    }
 
-    // Include up to 32 nearest BSP concrete portalable surfaces to keep snapshots compact
-    std::vector<std::pair<float, size_t>> ranked;
-    ranked.reserve(generic_map_->portal_surfaces.size());
-    for (size_t i = 0; i < generic_map_->portal_surfaces.size(); ++i) {
-        ranked.emplace_back(dist3(state.player_pos, generic_map_->portal_surfaces[i].pos), i);
+    // Sync exit door active state and guide through open doorway -> room elevator
+    bool room_has_floor_button = false;
+    for (const auto& e : state.entities) {
+        if (e.kind == "floor_button") {
+            room_has_floor_button = true;
+            break;
+        }
     }
-    const size_t kMaxWalls = 32;
-    if (ranked.size() > kMaxWalls) {
-        std::partial_sort(ranked.begin(), ranked.begin() + kMaxWalls, ranked.end());
-        ranked.resize(kMaxWalls);
-    } else {
+    for (auto& e : state.entities) {
+        if (e.kind == "exit_door") {
+            if (room_has_floor_button) {
+                // Require the cube (not just the player standing on it) to hold the button
+                e.active = any_room_button_active;
+            }
+            if (e.active && has_room_elevator) {
+                // First steer through open doorway; once past doorway, steer into exit elevator
+                const bool past_door =
+                    (DistXY(state.player_pos, room_elevator_pos) <
+                     DistXY(e.pos, room_elevator_pos) + 16.0f);
+                if (past_door) {
+                    e.pos = {room_elevator_pos.x, room_elevator_pos.y, room_base_z};
+                }
+                if (DistXY(state.player_pos, room_elevator_pos) <= 72.0f) {
+                    state.done = true;
+                    state.success = true;
+                }
+            } else if (e.active && DistXY(state.player_pos, e.pos) <= kExitTriggerRadius) {
+                state.done = true;
+                state.success = true;
+            }
+        }
+    }
+
+    // Select walkable vertical portalable concrete walls per zone (adjusted to walkable portal Z)
+    auto add_zone_walls = [&](int target_zone, float floor_z, size_t max_count) {
+        std::vector<std::pair<float, size_t>> ranked;
+        for (size_t i = 0; i < generic_map_->portal_surfaces.size(); ++i) {
+            const auto& s = generic_map_->portal_surfaces[i];
+            if (std::fabs(s.normal.z) > 0.25f) continue;  // vertical walls only
+            if (s.pos.z < floor_z - 16.0f || s.pos.z > floor_z + 128.0f) continue;
+            if (DistXY(s.pos, state.player_pos) > 1400.0f) continue;
+            ranked.emplace_back(DistXY(state.player_pos, s.pos), i);
+        }
         std::sort(ranked.begin(), ranked.end());
-    }
-    for (const auto& item : ranked) {
-        state.portal_walls.push_back(generic_map_->portal_surfaces[item.second]);
+        if (ranked.size() > max_count) ranked.resize(max_count);
+        for (const auto& item : ranked) {
+            PortalWallRecord w = generic_map_->portal_surfaces[item.second];
+            w.zone_id = target_zone;
+            w.pos.z = floor_z + 56.0f;  // walkable eye/chest height above zone floor
+            state.portal_walls.push_back(w);
+        }
+    };
+    add_zone_walls(0, room_base_z, 8);
+    add_zone_walls(1, room_base_z - 256.0f, 8);
+
+    // Ensure any live pre-placed Valve portal (e.g. portal_a_lvl3) has a matching PortalWall entry
+    auto ensure_portal_wall = [&](const PortalRecord& p) {
+        if (!p.active || p.wall_id.empty()) return;
+        for (const auto& w : state.portal_walls) {
+            if (w.id == p.wall_id) return;
+        }
+        state.portal_walls.push_back({p.wall_id, p.pos, p.normal, p.zone_id, 128.0f, 128.0f});
+    };
+    ensure_portal_wall(state.blue_portal);
+    ensure_portal_wall(state.orange_portal);
+
+    if (!state.done && tick >= 400) {
+        state.done = true;
+        state.success = false;
     }
 
     return state;

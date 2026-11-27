@@ -43,6 +43,7 @@ private:
     bool awaiting_post_reset_ = false;
     int step_start_zone_ = 0;
     std::string pending_drop_cube_;
+    Vec3 pending_drop_target_{};
     MotorCommand active_cmd_{};
     std::set<std::string> achieved_milestones_;
     float tick_dt_ = 0.015f;  // Portal 1 server tickrate = 66.7 Hz

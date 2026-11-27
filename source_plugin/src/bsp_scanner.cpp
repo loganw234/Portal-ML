@@ -120,6 +120,9 @@ void ParseEntitiesLump(const char* data, size_t len, BspMapData& out) {
     int idx_btn = 0;
     int idx_ped = 0;
     int idx_exit = 0;
+    int idx_elev = 0;
+    int idx_fizz = 0;
+    bool saw_portalgun = false;
 
     while (i < len) {
         while (i < len && data[i] != '{') ++i;
@@ -164,6 +167,14 @@ void ParseEntitiesLump(const char* data, size_t len, BspMapData& out) {
                 out.player_spawn_yaw = ang.y;
             }
             has_spawn = true;
+        } else if (cls == "weapon_portalgun" && !saw_portalgun) {
+            saw_portalgun = true;
+            if (kv.count("CanFirePortal1")) {
+                out.can_fire_blue = (kv["CanFirePortal1"] != "0");
+            }
+            if (kv.count("CanFirePortal2")) {
+                out.can_fire_orange = (kv["CanFirePortal2"] != "0");
+            }
         } else if (cls == "prop_physics" &&
                    (Contains(low_model, "metal_box") || Contains(low_model, "cube") ||
                     Contains(low_tname, "box"))) {
@@ -177,10 +188,20 @@ void ParseEntitiesLump(const char* data, size_t len, BspMapData& out) {
                    (cls == "prop_dynamic" && Contains(low_model, "switch001"))) {
             const std::string id = tname.empty() ? ("bsp_pedestal_" + std::to_string(idx_ped++)) : tname;
             out.entities.push_back({id, "pedestal_button", cls, model, org});
-        } else if (cls == "func_door" &&
-                   (Contains(low_tname, "exit") || Contains(low_tname, "door_left"))) {
+        } else if (cls == "func_door" && Contains(low_tname, "exit") && !Contains(low_tname, "right")) {
+            // Keep one door leaf per double-door pair (offset to doorway center)
             const std::string id = tname.empty() ? ("bsp_exit_" + std::to_string(idx_exit++)) : tname;
-            out.entities.push_back({id, "exit_door", cls, model, org});
+            Vec3 door_pos = org;
+            if (Contains(low_tname, "left")) {
+                door_pos.y += 36.0f;  // center between left & right sliding door panels
+            }
+            out.entities.push_back({id, "exit_door", cls, model, door_pos});
+        } else if (cls == "func_tracktrain" && Contains(low_tname, "elevator")) {
+            const std::string id = tname.empty() ? ("bsp_elev_" + std::to_string(idx_elev++)) : tname;
+            out.entities.push_back({id, "elevator", cls, model, org});
+        } else if (cls == "trigger_portal_cleanser") {
+            const std::string id = tname.empty() ? ("bsp_fizzler_" + std::to_string(idx_fizz++)) : tname;
+            out.entities.push_back({id, "fizzler", cls, model, org});
         }
     }
 }

@@ -38,6 +38,15 @@ public:
 private:
     void IssueCmd(const std::string& cmd) const;
     void* engine_ = nullptr;
+    mutable int stall_steps_ = 0;
+    mutable int slide_remaining_ = 0;
+    mutable float slide_sign_ = -1.0f;
+    mutable float best_target_dist_ = 1e9f;
+    mutable std::string last_target_id_;
+    mutable int prev_zone_ = 0;
+    mutable int pit_avoid_steps_ = 0;
+    mutable float pit_avoid_sign_ = 1.0f;
+    mutable std::string pit_avoid_target_;
 };
 
 }  // namespace portal_ml

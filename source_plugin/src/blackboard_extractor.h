@@ -101,8 +101,10 @@ public:
     void SetEngineInterfaces(void* engine_server, void* player_info_mgr, void* server_game_dll);
     void SetGenericMap(const BspMapData* map_data);
     bool IsGenericMode() const { return generic_map_ != nullptr; }
+    const BspMapData* GetGenericMap() const { return generic_map_; }
     void OnResetChamber(int chamber_id);
     void NotifyPortalPlaced(const std::string& color, const std::string& wall_id);
+    void NotifyPortalPlacedWall(const std::string& color, const PortalWallRecord& wall);
     void NotifyHoldState(const std::string& held_entity_id);
     void NotifyPedestalPressed(float duration);
 

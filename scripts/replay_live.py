@@ -65,10 +65,22 @@ def main() -> int:
 
     source_env: SourcePortalEnv | None = None
     env: PortalEnv
+    allow_orange = True
+    chambers_to_run = list(args.chambers)
     if args.backend == "source":
         source_env = SourcePortalEnv(host=args.host, port=args.port, timeout=15.0)
         source_env.connect()
         assert source_env.ping(), "Bridge ping failed"
+        info = source_env.map_info()
+        if info.get("generic_mode", False):
+            allow_orange = bool(info.get("can_fire_orange", True))
+            chambers_to_run = [0]
+            print(
+                f"Generic campaign map detected: {info.get('map_name')} "
+                f"(entities={info.get('discovered_entities')}, "
+                f"surfaces={info.get('portal_surfaces')}, "
+                f"can_fire_orange={allow_orange})"
+            )
         env = source_env
     else:
         env = MockPortalEnv()
@@ -78,12 +90,13 @@ def main() -> int:
     interact_r = 48.0 if args.backend == "source" else 44.0
     passed_count = 0
     try:
-        for cid in args.chambers:
+        for cid in chambers_to_run:
             ev = BehaviorTreeEvaluator(
                 tree,
                 solid_arrival_radius=solid_r,
                 floor_arrival_radius=floor_r,
                 interact_radius=interact_r,
+                allow_orange_portal=allow_orange,
             )
             t0 = time.perf_counter()
             snap = env.reset(cid)
@@ -154,8 +167,8 @@ def main() -> int:
         if trace_fp is not None:
             trace_fp.close()
 
-    print(f"SUMMARY: {passed_count}/{len(args.chambers)} chambers passed ({args.backend})")
-    return 0 if passed_count == len(args.chambers) else 1
+    print(f"SUMMARY: {passed_count}/{len(chambers_to_run)} chambers passed ({args.backend})")
+    return 0 if passed_count == len(chambers_to_run) else 1
 
 
 if __name__ == "__main__":

@@ -53,14 +53,18 @@ Started 2026-11-26. Objective: prove a decoupled 3-layer neuroevolutionary reaso
 - Verified live on Valve's unmodified campaign map **`testchmb_a_02`** via `scripts/inspect_live_map.py` (`records/live_testchmb_a02_2026-11-26.json`): auto-discovered 9 gameplay entities and 293 portalable concrete surfaces (walls, floors, ceilings) and moved the player cleanly via native `MoveVector`.
 - Documented the proposed Layer-4 small-LLM strategic memory & subgoal planner in [docs/FOUR_LAYER_ARCHITECTURE.md](FOUR_LAYER_ARCHITECTURE.md).
 
+### Milestone 5 — First Real Campaign Chamber Benchmark (`testchmb_a_02`) (Done, 2026-11-26)
+- Extended `BspScanner` (`source_plugin/src/bsp_scanner.cpp`) to parse `weapon_portalgun` capabilities (`CanFirePortal1`/`CanFirePortal2`), `func_tracktrain` elevators, `trigger_portal_cleanser` fizzlers, and deduplicated paired sliding exit doors.
+- Extended `BlackboardExtractor::ExtractGeneric` with vertical elevation zone clustering (`zone 0` main floor vs `zone 1` sunken pit), ceiling-dropper cube handling, live `prop_portal` outward normals, physical `func_door` displacement confirmation (`d > 52u`), and exit-to-elevator progression.
+- Extended `MotorController` with native `weapon_portalgun` firing (`ent_fire weapon_portalgun FirePortal1`), 2-stage obstacle wall-following (clearing glass partitions and U-shaped button alcoves), pit-edge avoidance, and live-VPhysics `point_teleport` button drops respecting Valve's `floor_button_trigger_player_*` -> `floor_button_trigger_box_*` handoff timing.
+- Added single-portal-gun remapping (`allow_orange_portal=False`) in `portal_ml/bt/evaluator.py` and automatic generic-map detection in `scripts/replay_live.py`.
+- **Verified live zero-shot solve on unmodified Valve `testchmb_a_02` Room 1 (Test Chamber 04)** using the frozen 24-node `champions/seed7_decoupled.bt` (trained strictly on synthetic mock Chambers 1–4): fastest verified solve **106 steps (11.87s, reward 174.70)**; saved pass trace `records/live_testchmb_a02_solve_2026-11-26.jsonl` (**286 steps, 33.68s, reward 165.70**, all 7 milestones: `portal_orange_placed`, `cube_grabbed`, `portal_traversed`, `portal_blue_placed`, `portals_bridged`, `button_pressed`, `exit_reached`). Honest limit: multi-run drop repeatability within 350 steps is ~1/3–2/3 due to Valve's duplicate-`targetname` dropper cube + VPhysics rim rolling (native `+use` / `CPlayerPickupController` carry-and-drop queued for motor hardening).
+- Re-verified **zero regressions on `portal_ml_5chambers`** (`-textmode`): **7/7 PASS** Phase 1 scripted (`13/35/22/11/49/39/45` steps) and **7/7 PASS** Phase 2B neural `MoveTo(83w) + Aim(44w)` (`13/59/21/20/72/61/86` steps).
+
 ---
 
 ## Upcoming Milestones (Worked One at a Time)
 
-### Milestone 5 — First Real Campaign Chamber Benchmark (`testchmb_a_02`)
-- Extend generic live-map extraction with dynamic walkable-zone/room segmentation, fizzler (`trigger_portal_cleanser`) state, and real portal-gun firing / native cube pickup on unmodified `testchmb_a_02`.
-- Add multi-entity targeting in `WorkingMemory` (nearest unpressed button / unplaced cube) and benchmark live real-campaign completion.
-
 ### Milestone 6 — Layer-4 Small-LLM Strategic Memory & Subgoal Planner
 - Implement the event-driven `StrategicPlanner` protocol (`docs/FOUR_LAYER_ARCHITECTURE.md`) with grammar-constrained JSON output and rolling episodic memory.
-- Run controlled 3-layer vs 4-layer ablations on multi-room campaign maps (`testchmb_a_02`, `testchmb_a_05`).
+- Run controlled 3-layer vs 4-layer ablations on multi-room campaign maps (`testchmb_a_02`, `testchmb_a_05`) and harden real-map cube handling (native `+use` pickup/drop).

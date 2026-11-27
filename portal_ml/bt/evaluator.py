@@ -67,11 +67,13 @@ class BehaviorTreeEvaluator:
         solid_arrival_radius: float = 18.0,
         floor_arrival_radius: float = 18.0,
         interact_radius: float = INTERACT_RADIUS,
+        allow_orange_portal: bool = True,
     ) -> None:
         self.tree = tree
         self.solid_arrival_radius = solid_arrival_radius
         self.floor_arrival_radius = floor_arrival_radius
         self.interact_radius = interact_radius
+        self.allow_orange_portal = allow_orange_portal
         self.memory = WorkingMemory()
 
     def reset(self) -> None:
@@ -218,9 +220,22 @@ class BehaviorTreeEvaluator:
                 color = PortalColor(args[0])
             except ValueError:
                 return NodeStatus.FAILURE
+            if color is PortalColor.ORANGE and not self.allow_orange_portal:
+                # Single-portal-gun mode (Portal 1 Chambers 02-09): Valve fixes the Orange
+                # portal; if the player's zone needs a bridge to Orange's zone, fire Blue here.
+                orange = snap.portal(PortalColor.ORANGE)
+                if args[1] == "wall_here" and orange.active and orange.zone_id != snap.player.zone_id:
+                    color = PortalColor.BLUE
+                else:
+                    return NodeStatus.FAILURE
             wall = resolve_wall(snap, mem, args[1])
             if wall is None:
                 return NodeStatus.FAILURE
+            if not self.allow_orange_portal and color is PortalColor.BLUE:
+                # Don't waste our only portal on the same zone that Valve's Orange portal already covers
+                orange = snap.portal(PortalColor.ORANGE)
+                if orange.active and wall.zone_id == orange.zone_id:
+                    return NodeStatus.FAILURE
             # Avoid futilely re-shooting the exact same color onto the exact same wall
             current = snap.portal(color)
             if current.active and current.wall_id == wall.id:

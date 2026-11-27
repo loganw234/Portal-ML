@@ -9,7 +9,7 @@ namespace portal_ml {
 
 struct DiscoveredEntity {
     std::string id;
-    std::string kind;  // "cube" | "floor_button" | "pedestal_button" | "exit_door" | "fizzler"
+    std::string kind;  // "cube" | "floor_button" | "pedestal_button" | "exit_door" | "fizzler" | "elevator"
     std::string classname;
     std::string model;
     Vec3 spawn_pos{};
@@ -19,6 +19,8 @@ struct BspMapData {
     std::string map_name;
     bool loaded = false;
     int bsp_version = 0;
+    bool can_fire_blue = true;
+    bool can_fire_orange = true;
     Vec3 player_spawn{};
     float player_spawn_yaw = 0.0f;
     std::vector<DiscoveredEntity> entities;
