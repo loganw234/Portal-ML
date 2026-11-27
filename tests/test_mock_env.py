@@ -11,10 +11,10 @@ from portal_ml.sim import MockPortalEnv
 
 
 class TestMockPortalEnv(unittest.TestCase):
-    def test_reference_solver_passes_all_five_chambers(self) -> None:
+    def test_reference_solver_passes_all_chambers(self) -> None:
         env = MockPortalEnv()
         tree = get_reference_tree()
-        for cid in (1, 2, 3, 4, 5):
+        for cid in (1, 2, 3, 4, 5, 6, 7):
             ev = BehaviorTreeEvaluator(tree)
             snap = env.reset(cid)
             steps = 0
@@ -24,6 +24,23 @@ class TestMockPortalEnv(unittest.TestCase):
                 steps += 1
             self.assertTrue(snap.success, f"Chamber {cid} should be solved")
             self.assertLess(steps, env.spec.max_steps)
+
+    def test_training_causal_augmentations_solvable_by_reference(self) -> None:
+        env = MockPortalEnv()
+        tree = get_reference_tree()
+        for cid, aug in ((3, "ch3_distractor_walls"), (4, "ch4_stale_portals")):
+            ev = BehaviorTreeEvaluator(tree)
+            env.reset(cid)
+            snap = env.apply_training_augmentation(aug)
+            if aug == "ch3_distractor_walls":
+                self.assertGreaterEqual(len(snap.portal_walls), 2)
+            else:
+                self.assertTrue(snap.blue_portal.active and snap.orange_portal.active)
+                self.assertEqual(snap.blue_portal.zone_id, 0)
+                self.assertEqual(snap.orange_portal.zone_id, 0)
+            while not snap.done:
+                snap = env.step(ev.tick(snap).command).snapshot
+            self.assertTrue(snap.success, f"Reference solver must solve {aug}")
 
     def test_chamber_2_pedestal_timer_closes_door(self) -> None:
         env = MockPortalEnv(dt=0.5)

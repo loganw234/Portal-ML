@@ -138,6 +138,62 @@ class MockPortalEnv:
         )
         return self._make_snapshot()
 
+    def apply_training_augmentation(self, kind: str) -> BlackboardSnapshot:
+        """Apply a training-only causal invariance perturbation to Chambers 3 or 4.
+
+        Breaks two spurious correlations present in the minimal 4-chamber training set
+        without leaking any held-out chamber geometry:
+        - ``ch3_distractor_walls``: adds non-essential portalable walls to single-zone
+          Chamber 3 so evolution cannot equate ``wall_exists`` with ``target_unreachable``.
+        - ``ch4_stale_portals``: pre-places both portals on zone-0 walls in Chamber 4 so
+          evolution cannot equate ``portals_active`` with ``portals_bridge(target)``.
+        """
+        if kind == "ch3_distractor_walls":
+            if self._spec.chamber_id != 3:
+                raise ValueError("ch3_distractor_walls only applies to Chamber 3")
+            extra_walls = [
+                PortalWall(
+                    id="c3_distractor_a",
+                    pos=Vec3(256.0, 4096.0, 64.0),
+                    normal=Vec3(0.0, 1.0, 0.0),
+                    zone_id=0,
+                ),
+                PortalWall(
+                    id="c3_distractor_b",
+                    pos=Vec3(256.0, 4480.0, 64.0),
+                    normal=Vec3(0.0, -1.0, 0.0),
+                    zone_id=0,
+                ),
+            ]
+            for w in extra_walls:
+                self._walls[w.id] = w
+                self._wall_list.append(w)
+        elif kind == "ch4_stale_portals":
+            if self._spec.chamber_id != 4:
+                raise ValueError("ch4_stale_portals only applies to Chamber 4")
+            wall_a = self._walls["c4_wall_a"]
+            stale_wall = PortalWall(
+                id="c4_wall_a_stale",
+                pos=Vec3(128.0, 6400.0, 64.0),
+                normal=Vec3(0.0, -1.0, 0.0),
+                zone_id=0,
+            )
+            self._walls[stale_wall.id] = stale_wall
+            self._wall_list.append(stale_wall)
+            self._blue.active = True
+            self._blue.wall_id = wall_a.id
+            self._blue.pos = wall_a.pos
+            self._blue.normal = wall_a.normal
+            self._blue.zone_id = wall_a.zone_id
+            self._orange.active = True
+            self._orange.wall_id = stale_wall.id
+            self._orange.pos = stale_wall.pos
+            self._orange.normal = stale_wall.normal
+            self._orange.zone_id = stale_wall.zone_id
+        else:
+            raise ValueError(f"Unknown training augmentation: {kind!r}")
+        return self._make_snapshot()
+
     def step(self, command: MotorCommand) -> StepResult:
         if self._done:
             return StepResult(

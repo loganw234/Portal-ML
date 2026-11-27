@@ -25,14 +25,25 @@ The core claim is architectural: separating *what* subgoal entity to pursue from
     - **Phase 2A (neural `MoveTo`, 83w):** **5/5 mock** (16/18/27/10/47 steps) and **5/5 live Portal 1** (11/12/23/10/51 steps; `records/live_phase2a_2026-11-26.jsonl`).
     - **Phase 2B (neural `MoveTo` + neural `ShootPortal Aim`, 127w total):** **5/5 mock** (16/18/27/20/67 steps) and **5/5 live Portal 1** (12/12/24/24/85 steps; `records/live_phase2b_2026-11-26.jsonl`).
 
-What comes next is tracked in [docs/ROADMAP.md](docs/ROADMAP.md): zero-shot generalization hardening + expanded held-out suite (Milestone 3), and native `CUserCmd` / `IPhysicsObject` Source control (Milestone 4).
+- **Generalization hardening, expanded 3-chamber held-out suite, and 7/7 live Portal 1 verification (Milestone 3, 2026-11-26).**
+  - Expanded the held-out suite to three unseen chambers (`HELD_OUT_CHAMBERS = (5, 6, 7)`): Chamber 5 (90° rotated cube across gap), Chamber 6 (cube at spawn, floor button across gap with opposite-facing walls), and Chamber 7 (3-zone, 2-pit portal relay requiring two mid-episode portal re-links).
+  - Diagnosed zero-shot failures to two root causes: an asymmetric unguarded `Drop()` primitive in `BehaviorTreeEvaluator` and two training-set spurious correlations (`wall_exists <=> target_unreachable` in Chamber 3; `portals_active <=> portals_bridge(target)` in Chamber 4).
+  - Fixed `Drop()` target-locality symmetry + added two training-only causal invariance augmentations strictly on Training Chambers 3 & 4 (zero held-out leakage). Across 10 seeds (`[1, 2, 3, 5, 7, 11, 13, 17, 21, 42]`, pop 120, gens 120):
+    - Baseline decoupled: `train_4/4 = 8/10`, `Ch5 = 3/10`, `Ch6 = 3/10`, `Ch7 = 3/10`, `all 3 held-out = 3/10`.
+    - `+ Drop()` symmetry: `train_4/4 = 10/10`, `Ch5 = 6/10`, `Ch6 = 6/10`, `Ch7 = 5/10`, `all 3 = 5/10`.
+    - `+ Causal invariance augmentation`: `train_4/4 = 9/10`, `Ch5 = 7/10`, `Ch6 = 8/10`, `Ch7 = 7/10`, **`all 3 held-out = 7/10` (2.33x baseline)**.
+  - Canonical 5-seed ablation (`[1, 7, 13, 21, 42]`): `decoupled` solved **5/5 train** and **4/5 (80%) across all three held-out chambers (5, 6, 7)** vs `unconstrained` **1/5 (20%)**.
+  - Synced Chambers 6 & 7 into `portal_ml_5chambers.bsp` (956 triangles, zero leaks) and `blackboard_extractor.cpp`, and verified **7/7 chambers PASS live in Portal 1** for BOTH Phase 1 scripted (`11/27/19/11/39/39/47` steps, 1.50s total; `records/live_7ch_phase1_2026-11-26.jsonl`) and Phase 2B neural `MoveTo(83w) + Aim(44w)` (`11/10/20/22/61/72/77` steps, 2.23s total, ~7.2ms resets; `records/live_7ch_phase2b_2026-11-26.jsonl`).
+- **Real Portal 1 campaign feasibility audited (`docs/REAL_GAME_ANALYSIS.md`, 2026-11-26).** Audited all 24 real Valve `.bsp` maps directly from `portal_pak_dir.vpk` via `scripts/audit_campaign_maps.py`, identifying Tier-1 real campaign targets (`testchmb_a_00`, `a_01`, `a_02`, `a_05`, `a_06`) and the four upgrades required to scale toward full-game completion.
+
+What comes next is tracked in [docs/ROADMAP.md](docs/ROADMAP.md) and [docs/REAL_GAME_ANALYSIS.md](docs/REAL_GAME_ANALYSIS.md): native `CUserCmd` / `IPhysicsObject` Source control + generic live-BSP entity/surface discovery (Milestone 4), leading into real Valve campaign chamber benchmarking (`testchmb_a_02`).
 
 ## The front door
 
     python tools/check.py
     python tools/check.py --control
 
-Runs every gate (personal-path guard, Python↔C++ chamber coordinate parity, Chamber 5 held-out isolation, `.vmf` integrity, and the 14-test unit/integration suite) and ends with `VERDICT: PASS`. Use `--quick` to skip the full evolution test during fast edits.
+Runs every gate (personal-path guard, Python↔C++ chamber 1–7 coordinate parity, held-out Chambers 5–7 isolation, `.vmf` integrity, Phase-2 checkpoint schema validation, and the 20-test unit/integration suite) and ends with `VERDICT: PASS`. Use `--quick` to skip the full evolution test during fast edits.
 
 ## Architecture
 
@@ -40,9 +51,9 @@ Runs every gate (personal-path guard, Python↔C++ chamber coordinate parity, Ch
 2. **Layer 2 — Evolved Reasoning Layer** (`portal_ml/bt/`, `portal_ml/evolution/`): Readable Behavior Tree DSL (`SELECTOR`, `SEQUENCE`, `CONDITION`, `ACTION`) evolved by structural & semantic AST mutations and subtree crossover.
 3. **Layer 3 — Motor Execution Layer** (`portal_ml/motor/primitives.py`): Deterministic Phase-1 primitives (`MoveTo`, `Grab`, `Drop`, `Press`, `ShootPortal`) plus the `MotorPolicy` protocol for Phase-2 neural controllers.
 
-## 5-Chamber Micro-Curriculum
+## 7-Chamber Testbed (4 Training + 3 Held-Out)
 
-All 5 chambers share one `.vmf` coordinate space separated by 2048-unit void gaps along Y:
+All 7 chambers share one `.vmf` coordinate space separated by 2048-unit void gaps along Y:
 
 | Chamber | Name | Role | Validated Capability |
 |---|---|---|---|
@@ -50,7 +61,9 @@ All 5 chambers share one `.vmf` coordinate space separated by 2048-unit void gap
 | 2 | The Pedestal | Training | 2-step causality (timed pedestal -> open exit) |
 | 3 | Box on Button | Training | Object permanence & state binding (grab -> carry -> drop -> exit) |
 | 4 | The Simple Gap | Training | Non-Euclidean portal placement & traversal |
-| 5 | Held-Out Generalization Test | **Held-Out** | Rotated 90° combo (cube across pit, floor button & closed exit at spawn); strict pass/fail + step count |
+| 5 | Held-Out Generalization Test | **Held-Out** | Rotated 90° combo (cube across pit, floor button & closed exit at spawn) |
+| 6 | Held-Out: Button Across Gap | **Held-Out** | Opposite asymmetry (cube & exit at spawn, floor button across pit, opposite-facing walls) |
+| 7 | Held-Out: Three-Zone Relay | **Held-Out** | 3 disconnected islands separated by 2 pits; requires two mid-episode portal re-links (`0->2->1->0`) |
 
 ## Running
 

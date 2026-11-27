@@ -114,23 +114,11 @@ void PortalMLPlugin::GameFrame(bool simulating) {
         }
         if (awaiting_post_step_ && active_cmd_.kind == MotorCmdKind::kDrop &&
             !pending_drop_cube_.empty() && pending_subticks_ == subticks_per_step_ - 2) {
-            // Teleport cube onto the floor/button, step player clear, and lift the cube's center
-            // +20.5u above the 12u pad so it rests cleanly on top without CC_Ent_Teleport floor pop.
-            const auto drop_state = extractor_.Extract(current_chamber_, tick_, tick_dt_);
-            const auto& layout = GetChamberLayout(current_chamber_);
-            float bx = layout.exit_pos.x - drop_state.player_pos.x;
-            float by = layout.exit_pos.y - drop_state.player_pos.y;
-            float bdist = std::hypot(bx, by);
-            if (bdist < 1e-3f) {
-                bx = 1.0f;
-                by = 0.0f;
-                bdist = 1.0f;
-            }
-            const float clear_x = drop_state.player_pos.x + (bx / bdist) * 52.0f;
-            const float clear_y = drop_state.player_pos.y + (by / bdist) * 52.0f;
+            // Player was already stepped 58u clear and aimed at the drop target on tick 0;
+            // now ent_teleport places the solid cube flush on top of the floor button with
+            // zero player-hull overlap.
             std::ostringstream ss;
             ss << "ent_teleport " << pending_drop_cube_ << "; "
-               << "setpos " << clear_x << ' ' << clear_y << " 16; "
                << "ent_fire " << pending_drop_cube_ << " DisableMotion \"\" 0.01\n";
             SendServerCmd(ss.str(), false);
             extractor_.SetPlayerVelocityXY(0.0f, 0.0f, true);

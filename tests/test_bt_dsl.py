@@ -68,6 +68,32 @@ class TestBehaviorTreeDSL(unittest.TestCase):
             res2.command, ShootPortal(color=PortalColor.ORANGE, wall_id="c4_wall_b")
         )
 
+    def test_drop_enforces_target_locality_symmetry(self) -> None:
+        env = MockPortalEnv()
+        snap = env.reset(3)
+        # Artificially hold cube while far from floor_button
+        snap.player.held_entity_id = "c3_cube_0"
+        cube = snap.entity_by_id("c3_cube_0")
+        assert cube is not None
+        cube.held = True
+        tree = SequenceNode(
+            [
+                ActionNode("SetTarget", ("floor_button",)),
+                ActionNode("Drop", ()),
+            ]
+        )
+        ev = BehaviorTreeEvaluator(tree)
+        # Far from floor_button -> Drop must fail (symmetric with Grab/Press)
+        res_far = ev.tick(snap)
+        self.assertIs(res_far.status, NodeStatus.FAILURE)
+        # Move player onto floor_button -> Drop succeeds
+        btn = snap.entity_by_id("c3_floor_btn_0")
+        assert btn is not None
+        snap.player.pos = btn.pos
+        res_near = ev.tick(snap)
+        self.assertIs(res_near.status, NodeStatus.RUNNING)
+        self.assertEqual(res_near.command.kind.value, "drop")
+
 
 if __name__ == "__main__":
     unittest.main()

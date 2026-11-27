@@ -37,8 +37,8 @@ def main() -> int:
     parser.add_argument("--backend", choices=["mock", "source"], default="source")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=27500)
-    parser.add_argument("--chambers", type=int, nargs="+", default=[1, 2, 3, 4, 5])
-    parser.add_argument("--max-steps", type=int, default=180)
+    parser.add_argument("--chambers", type=int, nargs="+", default=[1, 2, 3, 4, 5, 6, 7])
+    parser.add_argument("--max-steps", type=int, default=260)
     parser.add_argument("--verbose", action="store_true", help="Print every tick")
     parser.add_argument("--trace-out", default="", help="Optional JSONL file to record tick traces")
     parser.add_argument("--neural-moveto", default="", help="Optional Phase-2 MoveTo MLP JSON checkpoint")
@@ -73,13 +73,17 @@ def main() -> int:
     else:
         env = MockPortalEnv()
 
-    solid_r = 42.0 if args.backend == "source" else 18.0
+    solid_r = 46.0 if args.backend == "source" else 18.0
     floor_r = 28.0 if args.backend == "source" else 18.0
+    interact_r = 48.0 if args.backend == "source" else 44.0
     passed_count = 0
     try:
         for cid in args.chambers:
             ev = BehaviorTreeEvaluator(
-                tree, solid_arrival_radius=solid_r, floor_arrival_radius=floor_r
+                tree,
+                solid_arrival_radius=solid_r,
+                floor_arrival_radius=floor_r,
+                interact_radius=interact_r,
             )
             t0 = time.perf_counter()
             snap = env.reset(cid)

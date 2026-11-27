@@ -280,7 +280,145 @@ def _build_chambers() -> dict[int, ChamberSpec]:
         exit_starts_open=False,
     )
 
-    return {1: c1, 2: c2, 3: c3, 4: c4, 5: c5}
+    # Chamber 6: Held-Out Generalization Test — Button Across Gap (Y offset = 10240)
+    # Opposite asymmetry from Chamber 5: cube + spawn + closed exit on Zone 0;
+    # weighted floor button across the pit on Zone 1 with opposite-facing portal walls.
+    y6 = 10240.0
+    c6 = ChamberSpec(
+        chamber_id=6,
+        name="Held-Out: Button Across Gap",
+        description=(
+            "Never seen during training. Cube and closed exit at spawn (zone 0); "
+            "floor button across pit (zone 1). Must carry cube across, drop, and return."
+        ),
+        held_out=True,
+        room_min=Vec3(0.0, y6, 0.0),
+        room_max=Vec3(640.0, y6 + 384.0, 256.0),
+        player_spawn=Vec3(96.0, y6 + 192.0, 0.0),
+        player_spawn_yaw=0.0,
+        player_spawn_zone=0,
+        zones=(
+            WalkableZone(0, 16.0, 240.0, y6 + 16.0, y6 + 368.0, 0.0),
+            WalkableZone(1, 400.0, 624.0, y6 + 16.0, y6 + 368.0, 0.0),
+        ),
+        pits=(PitBox(256.0, 384.0, y6, y6 + 384.0, depth=128.0),),
+        entities=(
+            EntitySpawn(
+                id="c6_cube_0",
+                kind=EntityKind.CUBE,
+                pos=Vec3(176.0, y6 + 64.0, 0.0),
+                zone_id=0,
+            ),
+            EntitySpawn(
+                id="c6_floor_btn_0",
+                kind=EntityKind.FLOOR_BUTTON,
+                pos=Vec3(528.0, y6 + 192.0, 0.0),
+                zone_id=1,
+            ),
+            EntitySpawn(
+                id="c6_exit_0",
+                kind=EntityKind.EXIT_DOOR,
+                pos=Vec3(48.0, y6 + 320.0, 0.0),
+                zone_id=0,
+                initially_active=False,
+            ),
+        ),
+        portal_walls=(
+            PortalWall(
+                id="c6_wall_a",
+                pos=Vec3(128.0, y6, 64.0),
+                normal=Vec3(0.0, 1.0, 0.0),
+                zone_id=0,
+                size=(128.0, 128.0),
+            ),
+            PortalWall(
+                id="c6_wall_b",
+                pos=Vec3(512.0, y6 + 384.0, 64.0),
+                normal=Vec3(0.0, -1.0, 0.0),
+                zone_id=1,
+                size=(128.0, 128.0),
+            ),
+        ),
+        max_steps=260,
+        exit_starts_open=False,
+    )
+
+    # Chamber 7: Held-Out Generalization Test — 3-Zone Two-Gap Relay (Y offset = 12288)
+    # 3 disconnected islands separated by 2 pits:
+    # Zone 0: spawn + closed exit; Zone 1: floor button; Zone 2: weighted cube.
+    # Requires dynamically re-placing portals across 3 distinct bridges (0->2, 2->1, 1->0).
+    y7 = 12288.0
+    c7 = ChamberSpec(
+        chamber_id=7,
+        name="Held-Out: Three-Zone Relay",
+        description=(
+            "Never seen during training. Three islands separated by two pits: "
+            "exit on zone 0, floor button on zone 1, cube on zone 2."
+        ),
+        held_out=True,
+        room_min=Vec3(0.0, y7, 0.0),
+        room_max=Vec3(1024.0, y7 + 256.0, 256.0),
+        player_spawn=Vec3(128.0, y7 + 128.0, 0.0),
+        player_spawn_yaw=0.0,
+        player_spawn_zone=0,
+        zones=(
+            WalkableZone(0, 16.0, 240.0, y7 + 16.0, y7 + 240.0, 0.0),
+            WalkableZone(1, 400.0, 624.0, y7 + 16.0, y7 + 240.0, 0.0),
+            WalkableZone(2, 784.0, 1008.0, y7 + 16.0, y7 + 240.0, 0.0),
+        ),
+        pits=(
+            PitBox(256.0, 384.0, y7, y7 + 256.0, depth=128.0),
+            PitBox(640.0, 768.0, y7, y7 + 256.0, depth=128.0),
+        ),
+        entities=(
+            EntitySpawn(
+                id="c7_cube_0",
+                kind=EntityKind.CUBE,
+                pos=Vec3(912.0, y7 + 128.0, 0.0),
+                zone_id=2,
+            ),
+            EntitySpawn(
+                id="c7_floor_btn_0",
+                kind=EntityKind.FLOOR_BUTTON,
+                pos=Vec3(512.0, y7 + 128.0, 0.0),
+                zone_id=1,
+            ),
+            EntitySpawn(
+                id="c7_exit_0",
+                kind=EntityKind.EXIT_DOOR,
+                pos=Vec3(48.0, y7 + 128.0, 0.0),
+                zone_id=0,
+                initially_active=False,
+            ),
+        ),
+        portal_walls=(
+            PortalWall(
+                id="c7_wall_a",
+                pos=Vec3(128.0, y7, 64.0),
+                normal=Vec3(0.0, 1.0, 0.0),
+                zone_id=0,
+                size=(128.0, 128.0),
+            ),
+            PortalWall(
+                id="c7_wall_b",
+                pos=Vec3(512.0, y7, 64.0),
+                normal=Vec3(0.0, 1.0, 0.0),
+                zone_id=1,
+                size=(128.0, 128.0),
+            ),
+            PortalWall(
+                id="c7_wall_c",
+                pos=Vec3(896.0, y7, 64.0),
+                normal=Vec3(0.0, 1.0, 0.0),
+                zone_id=2,
+                size=(128.0, 128.0),
+            ),
+        ),
+        max_steps=320,
+        exit_starts_open=False,
+    )
+
+    return {1: c1, 2: c2, 3: c3, 4: c4, 5: c5, 6: c6, 7: c7}
 
 
 CHAMBERS: dict[int, ChamberSpec] = _build_chambers()
@@ -288,5 +426,5 @@ CHAMBERS: dict[int, ChamberSpec] = _build_chambers()
 
 def get_chamber(chamber_id: int) -> ChamberSpec:
     if chamber_id not in CHAMBERS:
-        raise ValueError(f"Unknown chamber_id={chamber_id}; expected 1..5")
+        raise ValueError(f"Unknown chamber_id={chamber_id}; expected 1..{len(CHAMBERS)}")
     return CHAMBERS[chamber_id]

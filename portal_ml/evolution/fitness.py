@@ -11,6 +11,7 @@ from portal_ml.sim.mock_env import MockPortalEnv, PortalEnv
 
 TRAIN_CHAMBERS: tuple[int, ...] = (1, 2, 3, 4)
 HELD_OUT_CHAMBER: int = 5
+HELD_OUT_CHAMBERS: tuple[int, ...] = (5, 6, 7)
 
 
 @dataclass(slots=True)
@@ -30,6 +31,15 @@ class FitnessReport:
     chambers_solved: int
     tree_size: int
     per_chamber: list[ChamberEval] = field(default_factory=list)
+    augmentations_solved: int = 0
+    augmentations_total: int = 0
+
+    @property
+    def all_train_checks_passed(self) -> bool:
+        return (
+            self.chambers_solved == len(self.per_chamber)
+            and self.augmentations_solved == self.augmentations_total
+        )
 
 
 @dataclass(slots=True)
@@ -86,10 +96,13 @@ def evaluate_chamber(
     chamber_id: int,
     include_approach_shaping: bool = True,
     stall_limit: int = 8,
+    augmentation: str | None = None,
 ) -> ChamberEval:
     """Run a single deterministic episode on `chamber_id`."""
     evaluator = BehaviorTreeEvaluator(tree)
     snap = env.reset(chamber_id)
+    if augmentation is not None and isinstance(env, MockPortalEnv):
+        snap = env.apply_training_augmentation(augmentation)
     total_reward = 0.0
     milestones: list[str] = []
 
@@ -180,8 +193,16 @@ def evaluate_genome(
     env: PortalEnv | None = None,
     parsimony_weight: float = 0.15,
     train_chambers: tuple[int, ...] = TRAIN_CHAMBERS,
+    causal_augmentation: bool = True,
 ) -> FitnessReport:
-    """Evaluate a genome strictly on Training Chambers 1-4."""
+    """Evaluate a genome strictly on Training Chambers 1-4.
+
+    When ``causal_augmentation`` is True (and ``env`` is a ``MockPortalEnv``),
+    adds two lightweight causal-invariance rollouts strictly derived from
+    Training Chambers 3 and 4 (distractor walls on Ch3; stale non-bridging
+    zone-0 portals on Ch4) to break training-set spurious correlations without
+    using any held-out chamber.
+    """
     sim = env if env is not None else MockPortalEnv()
     evals: list[ChamberEval] = []
     raw_reward = 0.0
@@ -194,11 +215,44 @@ def evaluate_genome(
         if res.passed:
             solved += 1
 
-    # Bonus for solving all training chambers simultaneously (prevents specializing on 3 of 4)
-    all_solved_bonus = 60.0 if solved == len(train_chambers) else 0.0
+    aug_bonus = 0.0
+    aug_solved = 0
+    aug_total = 0
+    if causal_augmentation and isinstance(sim, MockPortalEnv):
+        if 3 in train_chambers:
+            aug_total += 1
+            aug3 = evaluate_chamber(
+                tree,
+                sim,
+                3,
+                include_approach_shaping=False,
+                augmentation="ch3_distractor_walls",
+            )
+            aug_bonus += 0.5 * aug3.reward + (25.0 if aug3.passed else 0.0)
+            if aug3.passed:
+                aug_solved += 1
+        if 4 in train_chambers:
+            aug_total += 1
+            aug4 = evaluate_chamber(
+                tree,
+                sim,
+                4,
+                include_approach_shaping=False,
+                augmentation="ch4_stale_portals",
+            )
+            aug_bonus += 0.5 * aug4.reward + (25.0 if aug4.passed else 0.0)
+            if aug4.passed:
+                aug_solved += 1
+
+    # Bonus for solving all training chambers (and any causal augmentations) simultaneously
+    all_solved_bonus = (
+        60.0
+        if (solved == len(train_chambers) and aug_solved == aug_total)
+        else 0.0
+    )
     size = tree.size()
     parsimony_penalty = parsimony_weight * size
-    total_fitness = raw_reward + all_solved_bonus - parsimony_penalty
+    total_fitness = raw_reward + aug_bonus + all_solved_bonus - parsimony_penalty
 
     return FitnessReport(
         total_fitness=total_fitness,
@@ -207,6 +261,8 @@ def evaluate_genome(
         chambers_solved=solved,
         tree_size=size,
         per_chamber=evals,
+        augmentations_solved=aug_solved,
+        augmentations_total=aug_total,
     )
 
 

@@ -10,6 +10,7 @@ from typing import Callable
 from portal_ml.bt.ast import BTNode
 from portal_ml.evolution.fitness import (
     FitnessReport,
+    HELD_OUT_CHAMBERS,
     HeldOutReport,
     TRAIN_CHAMBERS,
     evaluate_genome,
@@ -33,6 +34,7 @@ class EvolutionConfig:
     mode: str = "decoupled"  # "decoupled" | "unconstrained"
     seed: int = 42
     polish_generations_after_solve: int = 12
+    causal_augmentation: bool = True
 
 
 @dataclass(slots=True)
@@ -50,6 +52,7 @@ class EvolutionResult:
     champion: BTNode
     train_report: FitnessReport
     held_out_report: HeldOutReport
+    held_out_reports: list[HeldOutReport] = field(default_factory=list)
     history: list[GenerationStats] = field(default_factory=list)
     episodes_evaluated: int = 0
     elapsed_sec: float = 0.0
@@ -101,8 +104,11 @@ class EvolutionTrainer:
                     genome,
                     env=self.env,
                     parsimony_weight=cfg.parsimony_weight,
+                    causal_augmentation=cfg.causal_augmentation,
                 )
-                episodes_total += len(TRAIN_CHAMBERS)
+                episodes_total += len(TRAIN_CHAMBERS) + (
+                    2 if cfg.causal_augmentation and isinstance(self.env, MockPortalEnv) else 0
+                )
                 scored.append((genome, report))
 
             scored.sort(key=lambda item: item[1].total_fitness, reverse=True)
@@ -131,7 +137,7 @@ class EvolutionTrainer:
             if on_generation is not None:
                 on_generation(stats)
 
-            if gen_best_report.chambers_solved == len(TRAIN_CHAMBERS):
+            if gen_best_report.all_train_checks_passed:
                 if first_all_solved_gen is None:
                     first_all_solved_gen = gen
                 elif (
@@ -165,14 +171,19 @@ class EvolutionTrainer:
             population = next_pop
 
         assert best_report is not None
-        # Strictly evaluate champion zero-shot on held-out Chamber 5
-        held_out = evaluate_held_out(best_genome, env=self.env)
+        # Strictly evaluate champion zero-shot on held-out Chambers 5, 6, and 7
+        held_out_all = [
+            evaluate_held_out(best_genome, env=self.env, chamber_id=cid)
+            for cid in HELD_OUT_CHAMBERS
+        ]
+        held_out = held_out_all[0]
         elapsed = time.perf_counter() - t0
 
         return EvolutionResult(
             champion=best_genome,
             train_report=best_report,
             held_out_report=held_out,
+            held_out_reports=held_out_all,
             history=history,
             episodes_evaluated=episodes_total,
             elapsed_sec=elapsed,

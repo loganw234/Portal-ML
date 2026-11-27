@@ -114,6 +114,10 @@ private:
 
     Vec3 prev_player_pos_{};
     bool has_prev_pos_ = false;
+    float tracked_yaw_ = 0.0f;
+    float tracked_pitch_ = 0.0f;
+    bool has_tracked_yaw_ = false;
+    int prev_zone_id_ = -1;
     std::string tracked_held_id_;
     float pedestal_timer_ = 0.0f;
     PortalRecord tracked_blue_{"blue"};

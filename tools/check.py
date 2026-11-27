@@ -24,7 +24,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from portal_ml.evolution.fitness import HELD_OUT_CHAMBER, TRAIN_CHAMBERS
+from portal_ml.evolution.fitness import HELD_OUT_CHAMBERS, TRAIN_CHAMBERS
 from portal_ml.motor.neural import (
     AIM_INPUT_NAMES,
     AIM_OUTPUT_NAMES,
@@ -100,7 +100,7 @@ def check_coord_parity(cpp_text: str) -> tuple[bool, str]:
         y_min_token = f"{spec.room_min.y:.1f}f"
         if y_min_token not in cpp_text:
             return False, f"COORD-MISMATCH (chamber {cid} min_y {y_min_token})"
-    return True, "Chambers 1-5 match C++ extractor"
+    return True, f"Chambers 1-{max(CHAMBERS)} match C++ extractor"
 
 
 def gate_coord_parity() -> tuple[bool, str]:
@@ -108,19 +108,22 @@ def gate_coord_parity() -> tuple[bool, str]:
     return check_coord_parity(cpp)
 
 
-def check_held_out_isolation(train_chambers: tuple[int, ...], held_out: int) -> tuple[bool, str]:
-    if held_out in train_chambers:
-        return False, "HELD-OUT-LEAK"
-    if not CHAMBERS[held_out].held_out:
-        return False, "HELD-OUT-FLAG-FALSE"
+def check_held_out_isolation(
+    train_chambers: tuple[int, ...], held_out_chambers: tuple[int, ...]
+) -> tuple[bool, str]:
+    for ho in held_out_chambers:
+        if ho in train_chambers:
+            return False, "HELD-OUT-LEAK"
+        if not CHAMBERS[ho].held_out:
+            return False, f"HELD-OUT-FLAG-FALSE ({ho})"
     for cid in train_chambers:
         if CHAMBERS[cid].held_out:
             return False, f"TRAIN-MARKED-HELD-OUT ({cid})"
-    return True, f"train={list(train_chambers)}, held_out={held_out}"
+    return True, f"train={list(train_chambers)}, held_out={list(held_out_chambers)}"
 
 
 def gate_held_out_isolation() -> tuple[bool, str]:
-    return check_held_out_isolation(TRAIN_CHAMBERS, HELD_OUT_CHAMBER)
+    return check_held_out_isolation(TRAIN_CHAMBERS, HELD_OUT_CHAMBERS)
 
 
 def check_vmf_text(text: str) -> tuple[bool, str]:
@@ -181,7 +184,7 @@ def run_controls() -> list[tuple[str, bool, str]]:
     results.append(("coord-parity/fault", caught, f"CONTROL-DETECTED ({msg_bad})" if caught else "CONTROL-MISSED"))
 
     # Control 3: held-out leak into training set
-    ok_leak, msg_leak = check_held_out_isolation((1, 2, 3, 4, 5), 5)
+    ok_leak, msg_leak = check_held_out_isolation((1, 2, 3, 4, 6), (5, 6, 7))
     caught = (not ok_leak) and (msg_leak == "HELD-OUT-LEAK")
     results.append(("held-out-iso/fault", caught, f"CONTROL-DETECTED ({msg_leak})" if caught else "CONTROL-MISSED"))
 

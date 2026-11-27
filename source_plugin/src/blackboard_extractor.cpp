@@ -86,7 +86,7 @@ int FindSendPropOffset(IServerGameDLL* dll, const char* class_name, const char* 
 
 const ChamberLayout& GetChamberLayout(int chamber_id) {
     // Exact 1:1 coordinates matching portal_ml/sim/chambers.py and portal_ml_5chambers.bsp
-    static const ChamberLayout kLayouts[5] = {
+    static const ChamberLayout kLayouts[7] = {
         // Chamber 1: The Hallway
         {1, 0.0f, 256.0f, {64.0f, 128.0f, 8.0f}, 0.0f, true,
          false, "", {}, false, "", {}, false, "", {},
@@ -118,8 +118,25 @@ const ChamberLayout& GetChamberLayout(int chamber_id) {
          "c5_exit_0", {96.0f, 8224.0f, 0.0f}, 260,
          {{0, 0.0f, 384.0f, 8192.0f, 8448.0f},
           {1, 0.0f, 384.0f, 8576.0f, 8832.0f}}},
+        // Chamber 6: Held-Out Generalization Test — Button Across Gap
+        {6, 10240.0f, 10624.0f, {96.0f, 10432.0f, 8.0f}, 0.0f, false,
+         true, "c6_cube_0", {176.0f, 10304.0f, 24.0f},
+         true, "c6_floor_btn_0", {528.0f, 10432.0f, 0.0f},
+         false, "", {},
+         "c6_exit_0", {48.0f, 10560.0f, 0.0f}, 260,
+         {{0, 0.0f, 256.0f, 10240.0f, 10624.0f},
+          {1, 384.0f, 640.0f, 10240.0f, 10624.0f}}},
+        // Chamber 7: Held-Out Generalization Test — Three-Zone Two-Gap Relay
+        {7, 12288.0f, 12544.0f, {128.0f, 12416.0f, 8.0f}, 0.0f, false,
+         true, "c7_cube_0", {912.0f, 12416.0f, 24.0f},
+         true, "c7_floor_btn_0", {512.0f, 12416.0f, 0.0f},
+         false, "", {},
+         "c7_exit_0", {48.0f, 12416.0f, 0.0f}, 320,
+         {{0, 0.0f, 256.0f, 12288.0f, 12544.0f},
+          {1, 384.0f, 640.0f, 12288.0f, 12544.0f},
+          {2, 768.0f, 1024.0f, 12288.0f, 12544.0f}}},
     };
-    const int idx = (chamber_id >= 1 && chamber_id <= 5) ? (chamber_id - 1) : 0;
+    const int idx = (chamber_id >= 1 && chamber_id <= 7) ? (chamber_id - 1) : 0;
     return kLayouts[idx];
 }
 
@@ -134,6 +151,19 @@ std::vector<PortalWallRecord> GetChamberPortalWalls(int chamber_id) {
         return {
             {"c5_wall_a", {0.0f, 8320.0f, 64.0f}, {1.0f, 0.0f, 0.0f}, 0, 128.0f, 128.0f},
             {"c5_wall_b", {384.0f, 8704.0f, 64.0f}, {-1.0f, 0.0f, 0.0f}, 1, 128.0f, 128.0f},
+        };
+    }
+    if (chamber_id == 6) {
+        return {
+            {"c6_wall_a", {128.0f, 10240.0f, 64.0f}, {0.0f, 1.0f, 0.0f}, 0, 128.0f, 128.0f},
+            {"c6_wall_b", {512.0f, 10624.0f, 64.0f}, {0.0f, -1.0f, 0.0f}, 1, 128.0f, 128.0f},
+        };
+    }
+    if (chamber_id == 7) {
+        return {
+            {"c7_wall_a", {128.0f, 12288.0f, 64.0f}, {0.0f, 1.0f, 0.0f}, 0, 128.0f, 128.0f},
+            {"c7_wall_b", {512.0f, 12288.0f, 64.0f}, {0.0f, 1.0f, 0.0f}, 1, 128.0f, 128.0f},
+            {"c7_wall_c", {896.0f, 12288.0f, 64.0f}, {0.0f, 1.0f, 0.0f}, 2, 128.0f, 128.0f},
         };
     }
     return {};
@@ -226,13 +256,18 @@ void BlackboardExtractor::SetPlayerVelocityXY(float vx, float vy, bool zero_z) {
 }
 
 void BlackboardExtractor::SetPlayerEyeAngles(float pitch, float yaw) {
+    tracked_pitch_ = pitch;
+    tracked_yaw_ = yaw;
+    has_tracked_yaw_ = true;
     ResolveNetProps();
 #ifdef PORTAL_ML_USE_SOURCE_SDK
     auto* engine = static_cast<IVEngineServer*>(engine_);
     if (!engine) return;
     edict_t* player_ed = engine->PEntityOfEntIndex(1);
     if (!player_ed || player_ed->IsFree()) return;
-    engine->ClientCommand(player_ed, "setang %.2f %.2f 0\n", pitch, yaw);
+    std::ostringstream ss;
+    ss << "setang " << pitch << ' ' << yaw << " 0\n";
+    engine->ServerCommand(ss.str().c_str());
     IServerUnknown* unk = player_ed->GetUnknown();
     if (!unk) return;
     auto* base = reinterpret_cast<uint8_t*>(unk->GetBaseEntity());
@@ -253,6 +288,10 @@ void BlackboardExtractor::OnResetChamber(int chamber_id) {
     const auto& layout = GetChamberLayout(chamber_id);
     prev_player_pos_ = layout.player_spawn;
     has_prev_pos_ = false;
+    tracked_yaw_ = layout.player_yaw;
+    tracked_pitch_ = 0.0f;
+    has_tracked_yaw_ = true;
+    prev_zone_id_ = ClassifyZone(layout, layout.player_spawn.x, layout.player_spawn.y);
     tracked_held_id_.clear();
     pedestal_timer_ = 0.0f;
     tracked_blue_ = PortalRecord{"blue"};
@@ -261,7 +300,7 @@ void BlackboardExtractor::OnResetChamber(int chamber_id) {
 
 void BlackboardExtractor::NotifyPortalPlaced(const std::string& color, const std::string& wall_id) {
     // Updated immediately on ShootPortal and cross-checked against live prop_portal edicts
-    for (int cid = 4; cid <= 5; ++cid) {
+    for (int cid = 4; cid <= 7; ++cid) {
         for (const auto& w : GetChamberPortalWalls(cid)) {
             if (w.id == wall_id) {
                 PortalRecord& target = (color == "blue") ? tracked_blue_ : tracked_orange_;
@@ -325,6 +364,18 @@ BlackboardState BlackboardExtractor::Extract(int chamber_id, int tick, float dt)
                 state.player_pos = {org.x, org.y, org.z};
                 state.player_yaw = ang.y;
                 state.player_pitch = ang.x;
+                // Prefer live server m_angEyeAngles over client-replicated GetAbsAngles
+                // so yaw updates deterministically even when hl2.exe runs unfocused/fast.
+                IServerUnknown* punk = player_ed->GetUnknown();
+                if (punk) {
+                    const auto* pbase = reinterpret_cast<const uint8_t*>(punk->GetBaseEntity());
+                    if (pbase && netprop_eye_yaw_ >= 0) {
+                        state.player_yaw = *reinterpret_cast<const float*>(pbase + netprop_eye_yaw_);
+                    }
+                    if (pbase && netprop_eye_pitch_ >= 0) {
+                        state.player_pitch = *reinterpret_cast<const float*>(pbase + netprop_eye_pitch_);
+                    }
+                }
             }
         }
 
@@ -378,6 +429,18 @@ BlackboardState BlackboardExtractor::Extract(int chamber_id, int tick, float dt)
     has_prev_pos_ = true;
 
     state.player_zone_id = ClassifyZone(layout, state.player_pos.x, state.player_pos.y);
+    if (has_tracked_yaw_) {
+        if (prev_zone_id_ >= 0 && state.player_zone_id != prev_zone_id_) {
+            // Re-sync orientation after a portal teleport
+            tracked_yaw_ = state.player_yaw;
+            tracked_pitch_ = state.player_pitch;
+        } else {
+            // Avoid client CUserCmd echo overwriting server-commanded setang when unfocused
+            state.player_yaw = tracked_yaw_;
+            state.player_pitch = tracked_pitch_;
+        }
+    }
+    prev_zone_id_ = state.player_zone_id;
     state.held_entity_id = tracked_held_id_;
 
     bool floor_btn_pressed = false;

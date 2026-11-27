@@ -25,6 +25,11 @@ def main() -> None:
     parser.add_argument("--pop", type=int, default=120, help="Population size")
     parser.add_argument("--gens", type=int, default=100, help="Max generations")
     parser.add_argument("--seed", type=int, default=7, help="RNG seed")
+    parser.add_argument(
+        "--no-causal-aug",
+        action="store_true",
+        help="Disable training-only causal invariance augmentations on Chambers 3 & 4.",
+    )
     parser.add_argument("--save-champion", type=str, default="", help="Optional path to save champion DSL")
     parser.add_argument("--quiet", action="store_true")
     args = parser.parse_args()
@@ -34,6 +39,7 @@ def main() -> None:
         generations=args.gens,
         mode=args.mode,
         seed=args.seed,
+        causal_augmentation=not args.no_causal_aug,
     )
 
     source_env: SourcePortalEnv | None = None
@@ -68,10 +74,10 @@ def main() -> None:
         status = "PASS" if c.passed else "FAIL"
         print(f"  Chamber {c.chamber_id}: {status:4s} | steps={c.steps:3d} | reward={c.reward:7.2f} | milestones={c.milestones}")
 
-    ho = result.held_out_report
-    ho_status = "PASS" if ho.passed else "FAIL"
-    print(f"\n=== Held-Out Generalization Test (Chamber {ho.chamber_id}) ===")
-    print(f"Result:        {ho_status} | steps={ho.steps} | milestones={ho.milestones}")
+    print("\n=== Held-Out Generalization Suite (Chambers 5, 6, 7) ===")
+    for ho in result.held_out_reports:
+        ho_status = "PASS" if ho.passed else "FAIL"
+        print(f"  Chamber {ho.chamber_id}: {ho_status:4s} | steps={ho.steps:3d} | milestones={ho.milestones}")
 
     dsl = format_bt(result.champion)
     print("\n=== Evolved Champion Behavior Tree (DSL) ===")

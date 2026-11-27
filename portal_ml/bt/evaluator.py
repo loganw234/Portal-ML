@@ -66,10 +66,12 @@ class BehaviorTreeEvaluator:
         tree: BTNode,
         solid_arrival_radius: float = 18.0,
         floor_arrival_radius: float = 18.0,
+        interact_radius: float = INTERACT_RADIUS,
     ) -> None:
         self.tree = tree
         self.solid_arrival_radius = solid_arrival_radius
         self.floor_arrival_radius = floor_arrival_radius
+        self.interact_radius = interact_radius
         self.memory = WorkingMemory()
 
     def reset(self) -> None:
@@ -178,7 +180,7 @@ class BehaviorTreeEvaluator:
                 return NodeStatus.FAILURE
             if ent.zone_id != snap.player.zone_id:
                 return NodeStatus.FAILURE
-            if snap.player.pos.distance_xy(ent.pos) > INTERACT_RADIUS:
+            if snap.player.pos.distance_xy(ent.pos) > self.interact_radius:
                 return NodeStatus.FAILURE
             ctx.command = Grab(entity_id=ent.id)
             return NodeStatus.RUNNING
@@ -186,6 +188,14 @@ class BehaviorTreeEvaluator:
         if name == "Drop":
             if snap.player.held_entity_id is None:
                 return NodeStatus.FAILURE
+            # Enforce local-target symmetry with Grab/Press when a drop destination is bound.
+            ref = args[0] if args else "target"
+            ent = resolve_entity(snap, mem, ref)
+            if ent is not None and ent.id != snap.player.held_entity_id:
+                if ent.zone_id != snap.player.zone_id:
+                    return NodeStatus.FAILURE
+                if snap.player.pos.distance_xy(ent.pos) > self.interact_radius:
+                    return NodeStatus.FAILURE
             ctx.command = Drop()
             return NodeStatus.RUNNING
 
@@ -196,7 +206,7 @@ class BehaviorTreeEvaluator:
                 return NodeStatus.FAILURE
             if ent.zone_id != snap.player.zone_id:
                 return NodeStatus.FAILURE
-            if snap.player.pos.distance_xy(ent.pos) > INTERACT_RADIUS:
+            if snap.player.pos.distance_xy(ent.pos) > self.interact_radius:
                 return NodeStatus.FAILURE
             ctx.command = Press(entity_id=ent.id)
             return NodeStatus.RUNNING

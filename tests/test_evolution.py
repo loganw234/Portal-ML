@@ -27,10 +27,10 @@ class TestEvolution(unittest.TestCase):
             reparsed = parse_bt(format_bt(child))
             self.assertEqual(reparsed.size(), child.size())
 
-    def test_evolution_solves_train_and_generalizes_to_chamber_5(self) -> None:
+    def test_evolution_solves_train_and_generalizes_to_held_out_suite(self) -> None:
         cfg = EvolutionConfig(
             population_size=120,
-            generations=80,
+            generations=90,
             seed=7,
             mode="decoupled",
         )
@@ -44,6 +44,11 @@ class TestEvolution(unittest.TestCase):
             res.held_out_report.passed,
             "Champion trained strictly on Chambers 1-4 should generalize zero-shot to Chamber 5",
         )
+        for ho in res.held_out_reports:
+            self.assertTrue(
+                ho.passed,
+                f"Champion trained strictly on Chambers 1-4 should generalize zero-shot to Chamber {ho.chamber_id}",
+            )
         self.assertLess(res.held_out_report.steps, 100)
 
 

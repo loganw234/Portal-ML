@@ -84,7 +84,7 @@ class TestPhase2Motor(unittest.TestCase):
         restored = MotorCommand.from_dict(cmd.to_dict())
         self.assertEqual(restored, cmd)
 
-    def test_frozen_bt_passes_all_five_chambers_with_phase2_neural_primitives(self) -> None:
+    def test_frozen_bt_passes_all_chambers_with_phase2_neural_primitives(self) -> None:
         bt_path = ROOT / "champions" / "seed7_decoupled.bt"
         mt_path = ROOT / "champions" / "moveto_mlp.json"
         aim_path = ROOT / "champions" / "aim_mlp.json"
@@ -97,7 +97,7 @@ class TestPhase2Motor(unittest.TestCase):
             HybridMotorController(moveto_policy=moveto),
             HybridMotorController(moveto_policy=moveto, aim_policy=aim),
         ):
-            for cid in (1, 2, 3, 4, 5):
+            for cid in (1, 2, 3, 4, 5, 6, 7):
                 ev = BehaviorTreeEvaluator(tree)
                 snap = env.reset(cid)
                 while not snap.done:

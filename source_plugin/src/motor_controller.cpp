@@ -236,31 +236,55 @@ void MotorController::Execute(
     }
 
     if (cmd.kind == MotorCmdKind::kDrop) {
-        extractor.SetPlayerVelocityXY(0.0f, 0.0f);
+        extractor.SetPlayerVelocityXY(0.0f, 0.0f, true);
         std::ostringstream ss;
         ss << "ent_fire !player AddOutput \"basevelocity 0 0 0\"; ";
         if (!state.held_entity_id.empty()) {
-            // Aim downward ~62 deg (~34u ahead) so ent_teleport drops the VPhysics cube
-            // cleanly in front of the player without overlapping the player hull.
-            float drop_yaw = state.player_yaw;
-            float drop_pitch = 62.0f;
+            // Compute drop target (floor button if in range, else 48u ahead of player)
+            // and step the player 56u clear FIRST so the solid cube never overlaps the
+            // player's 16u hull when ent_teleport places it on the button.
+            float tgt_x = state.player_pos.x + std::cos(state.player_yaw * (3.14159265f / 180.0f)) * 48.0f;
+            float tgt_y = state.player_pos.y + std::sin(state.player_yaw * (3.14159265f / 180.0f)) * 48.0f;
+            float tgt_z = 12.0f;
             for (const auto& e : state.entities) {
                 if (e.kind == "floor_button" && e.zone_id == state.player_zone_id) {
                     const float dx = e.pos.x - state.player_pos.x;
                     const float dy = e.pos.y - state.player_pos.y;
-                    const float d = std::hypot(dx, dy);
-                    if (d <= 52.0f) {
-                        if (d > 4.0f) {
-                            drop_yaw = std::atan2(dy, dx) * kRadToDeg;
-                        }
-                        drop_pitch = std::atan2(64.0f, std::max(18.0f, d)) * kRadToDeg;
+                    if (std::hypot(dx, dy) <= 56.0f) {
+                        tgt_x = e.pos.x;
+                        tgt_y = e.pos.y;
+                        tgt_z = e.pos.z + 12.0f;
                     }
                     break;
                 }
             }
+            const auto& layout = GetChamberLayout(state.chamber_id);
+            float bx = layout.exit_pos.x - tgt_x;
+            float by = layout.exit_pos.y - tgt_y;
+            float bdist = std::hypot(bx, by);
+            if (bdist < 1e-3f) {
+                bx = -1.0f;
+                by = 0.0f;
+                bdist = 1.0f;
+            }
+            float clear_x = tgt_x + (bx / bdist) * 72.0f;
+            float clear_y = tgt_y + (by / bdist) * 72.0f;
+            for (const auto& z : layout.zones) {
+                if (z.zone_id == state.player_zone_id) {
+                    clear_x = ClampF(clear_x, z.min_x + 24.0f, z.max_x - 24.0f);
+                    clear_y = ClampF(clear_y, z.min_y + 24.0f, z.max_y - 24.0f);
+                    break;
+                }
+            }
+            const float dx = tgt_x - clear_x;
+            const float dy = tgt_y - clear_y;
+            const float d = std::max(18.0f, std::hypot(dx, dy));
+            const float drop_yaw = std::atan2(dy, dx) * kRadToDeg;
+            // Player eyes at z = 16 + 64 = 80; aim down to button top (tgt_z = 12)
+            const float drop_pitch = std::atan2(80.0f - tgt_z, d) * kRadToDeg;
+
+            ss << "setpos " << clear_x << ' ' << clear_y << " 16; ";
             extractor.SetPlayerEyeAngles(drop_pitch, drop_yaw);
-            // Restore solid 6 while cube is still overhead (z+108) so ent_teleport uses
-            // its real +-20.3u bounding box and places it flush on top of func_weight_button.
             ss << "ent_fire " << state.held_entity_id << " AddOutput \"solid 6\"";
         }
         ss << "\n";
